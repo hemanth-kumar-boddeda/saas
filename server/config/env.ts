@@ -47,14 +47,10 @@ export const ENV_SPECS: EnvSpec[] = [
   { name: "SMTP_SERVICE", scope: "email", required: false, purpose: "Nodemailer well-known service name", provider: "your mail provider" },
   { name: "SMTP_MAIL", scope: "email", required: false, purpose: "SMTP username / sender address", provider: "your mail provider" },
   { name: "SMTP_PASSWORD", scope: "email", required: false, purpose: "SMTP password or app password", provider: "your mail provider" },
-  { name: "STRIPE_SECRET_KEY", scope: "payments", required: false, purpose: "Stripe server-side API key", provider: "Stripe" },
-  { name: "STRIPE_PUBLISHABLE_KEY", scope: "payments", required: false, purpose: "Stripe browser-safe publishable key", provider: "Stripe" },
-  { name: "STRIPE_WEBHOOK_SECRET", scope: "payments", required: false, purpose: "Stripe webhook signature secret", provider: "Stripe" },
-  { name: "STRIPE_CURRENCY", scope: "payments", required: false, purpose: "Canonical platform currency (default inr)", provider: "you" },
-  { name: "CLOUD_NAME", scope: "video", required: false, purpose: "Cloudinary cloud name", provider: "Cloudinary" },
-  { name: "CLOUD_API_KEY", scope: "video", required: false, purpose: "Cloudinary API key", provider: "Cloudinary" },
-  { name: "CLOUD_SECRET_KEY", scope: "video", required: false, purpose: "Cloudinary API secret", provider: "Cloudinary" },
-  { name: "VDOCIPHER_API_KEY", scope: "video", required: false, purpose: "VdoCipher OTP API secret", provider: "VdoCipher" },
+  { name: "STORAGE_DIR", scope: "video", required: false, purpose: "Directory for uploaded videos and HLS output (default ./storage)", provider: "you" },
+  { name: "MAX_UPLOAD_MB", scope: "video", required: false, purpose: "Max upload size in MB (default 1024)", provider: "you" },
+  { name: "STREAM_SECRET", scope: "video", required: false, purpose: "HMAC secret for signed stream URLs (derived from ACCESS_TOKEN if unset)", provider: "you" },
+  { name: "GUEST_SECRET", scope: "video", required: false, purpose: "Signing secret for guest review sessions (derived from ACCESS_TOKEN if unset)", provider: "you" },
   { name: "PLATFORM_ADMIN_EMAIL", scope: "admin", required: false, purpose: "E-mail promoted to admin once, after a verified login", provider: "you" },
 ];
 

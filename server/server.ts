@@ -6,6 +6,7 @@ import { v2 as cloudinary } from "cloudinary";
 import { ErrorMiddleware } from "./middleware/error";
 import userRouter from "./routes/user.route";
 import authRouter from "./routes/auth.route";
+import reviewRouter from "./routes/review.route";
 import http from "http";
 import { allowedOrigins } from "./config/env";
 
@@ -16,7 +17,7 @@ const app = express();
 const server = http.createServer(app);
 
 // Body parser
-app.use(express.json({ limit: "50mb" }));
+app.use(express.json({ limit: "1mb" }));
 
 // CORS (Cross-Origin Resource Sharing)
 app.use(
@@ -56,6 +57,7 @@ cloudinary.config({
 // Routes
 app.use("/v1/auth/", authRouter);
 app.use("/v1/users/", userRouter);
+app.use("/v1/", reviewRouter);
 
 app.get("/", (req: Request, res: Response) => {
   return res.send("Express Typescript on Vercel");

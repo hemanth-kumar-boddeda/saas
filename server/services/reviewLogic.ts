@@ -109,3 +109,13 @@ export const filterComments = <T extends CommentLike>(
     if (filter.toTime !== undefined && c.timecode > filter.toTime) return false;
     return true;
   }).filter((c, _i, kept) => !c.parentId || kept.some((r) => String(r._id) === String(c.parentId)));
+
+/** Role of a signed-in user on a project, or null when they have no access. */
+export const roleFor = (
+  project: { owner: unknown; editors?: unknown[] },
+  userId: string
+): ProjectRole | null => {
+  if (String(project.owner) === userId) return "owner";
+  if ((project.editors ?? []).some((e) => String(e) === userId)) return "editor";
+  return null;
+};
