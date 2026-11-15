@@ -1,3 +1,6 @@
+# dependencies (regenerate with npm install)
+node_modules/
+
 # build output
 dist/
 build/
