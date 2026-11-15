@@ -5,12 +5,12 @@ import { generateAccessToken } from '../controllers/user.controller';
 
 const orderRouter = express.Router();
 
-orderRouter.post('/create-order', isAuthenticated, createOrder);
+orderRouter.post('/create-order', generateAccessToken, isAuthenticated, createOrder);
 
 orderRouter.get('/get-orders',generateAccessToken,isAuthenticated,authorizeRoles("admin"),getAllOrders);
 
 orderRouter.get("/payment/stripe-publishable-key",sendStripePublishableKey);
 
-orderRouter.post("/payment",isAuthenticated,generateAccessToken,newPayment);
+orderRouter.post("/payment",generateAccessToken,isAuthenticated,newPayment);
 
 export default orderRouter;

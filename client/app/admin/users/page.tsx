@@ -4,11 +4,7 @@ import AllUsers from '@/app/components/Admin/Users/AllUsers';
 import AdminProtected from '@/app/hooks/adminProtected';
 import Heading from '@/app/utils/Heading';
 
-type Props = {
-  isTeam: boolean;
-};
-
-const Page = ({ isTeam }: Props) => {
+const Page = () => {
   return (
     <div>
       <AdminProtected>
@@ -23,7 +19,7 @@ const Page = ({ isTeam }: Props) => {
           </div>
           <div className="w-full min-h-screen">
             <DashboardHeader />
-            <AllUsers isTeam={isTeam} />
+            <AllUsers isTeam={false} />
           </div>
         </div>
       </AdminProtected>

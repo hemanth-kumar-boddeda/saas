@@ -24,7 +24,7 @@ const Footer = (props: Props) => {
                 </li>
                 <li>
                   <Link
-                    href="/privacy-policy"
+                    href="/privacy"
                     className="text-base text-black dark:text-gray-300 dark:hover:text-[#ff3377] hover:text-[#37a39a]"
                   >
                     Privacy Policy

@@ -1,12 +1,11 @@
 "use client";
 import React from "react";
 import VideoDetailsPage from "../../components/Videos/VideoDetailsPage";
-type Props = {};
 
-const page = ({ params }: any) => {
+const page = ({ params }: { params: { id: string } }) => {
   return (
     <div className="pt-20">
-      <VideoDetailsPage id={params.id} user={undefined} />
+      <VideoDetailsPage id={params.id} />
     </div>
   );
 };

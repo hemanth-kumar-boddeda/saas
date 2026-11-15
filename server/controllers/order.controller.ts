@@ -9,7 +9,7 @@ import VideoModel from "../models/video.model";
 import { IVideo } from "../models/video.model";
 import { getAllOrdersService, newOrder } from "../services/order.service";
 import ErrorHandler from "../utils/ErrorHandler";
-import { redis } from "../utils/redis";
+import { updateSessionUser } from "../utils/session";
 import sendMail from "../utils/sendMail";
 require("dotenv").config();
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
@@ -32,7 +32,16 @@ export const createOrder = CatchAsyncError(
         }
       }
 
-      const user = await userModel.findById(req.user?._id);
+      const userId = req.user?._id;
+      const sessionId = req.sessionId;
+      if (!userId || !sessionId) {
+        return next(new ErrorHandler(401, "Please login to access this resource"));
+      }
+
+      const user = await userModel.findById(userId);
+      if (!user) {
+        return next(new ErrorHandler(404, "User not found"));
+      }
 
       const videoExistsInUser = user?.videos.some(
         (video: any) => video._id.toString() === videoId
@@ -84,13 +93,12 @@ export const createOrder = CatchAsyncError(
           });
         }
       } catch (err: any) {
-        return next(new ErrorHandler(err.message, 500));
+        return next(new ErrorHandler(500, err.message));
       }
       user?.videos.push(video?._id);
 
-      await redis.set(req.user?._id, JSON.stringify(user));
-
       await user?.save();
+      await updateSessionUser(sessionId, user);
 
       await NotificationModel.create({
         user: user?._id,
@@ -98,13 +106,13 @@ export const createOrder = CatchAsyncError(
         message: `You have a new order from ${video?.name}`,
       });
 
-      video.purchased = video.purchased + 1;
+      video.purchased = (video.purchased ?? 0) + 1;
 
       await video.save();
 
       newOrder(data, res, next);
     } catch (err: any) {
-      return next(new ErrorHandler(err.message, 500));
+      return next(new ErrorHandler(500, err.message));
     }
   }
 );
@@ -115,7 +123,7 @@ export const getAllOrders = CatchAsyncError(
     try {
       getAllOrdersService(res);
     } catch (err: any) {
-      return next(new ErrorHandler(err.message, 500));
+      return next(new ErrorHandler(500, err.message));
     }
   }
 );
@@ -148,7 +156,7 @@ export const newPayment = CatchAsyncError(
         .status(201)
         .json({ success: true, client_secret: myPayment.client_secret });
     } catch (error: any) {
-      return next(new ErrorHandler(error.message, 500));
+      return next(new ErrorHandler(500, error.message));
     }
   }
 );

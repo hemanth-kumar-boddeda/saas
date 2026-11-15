@@ -21,7 +21,7 @@ import {
   SettingsIcon,
   ExitToAppIcon,
 } from "./Icon";
-import avatarDefault from "../../../../../public/assets/avatar.jpg";
+import avatarDefault from "../../../../public/assets/avatar.jpg";
 import { useSelector } from "react-redux";
 import Link from "next/link";
 import Image from "next/image";
@@ -57,7 +57,7 @@ const AdminSidebar = () => {
   const [selected, setSelected] = useState("Dashboard");
   const [mounted, setMounted] = useState(false);
   const { theme, setTheme } = useTheme();
-  const {} = useLogoutQuery(undefined, {
+  const {} = useLogOutQuery(undefined, {
     skip: !logout ? true : false,
   });
 
@@ -121,7 +121,7 @@ const AdminSidebar = () => {
                 alignItems="center"
                 ml="15px"
               >
-                <Link href="/">
+                <Link href="/marketplace">
                   <h3 className="text-[25px] font-Poppins uppercase dark:text-white text-black">
                     V I D T O U C H
                   </h3>

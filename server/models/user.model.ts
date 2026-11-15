@@ -8,17 +8,17 @@ export interface IUser extends Document {
     name: string;
     email: string;
     password: string;
+    googleId?: string;
     avatar: {
         public_id: string;
         url: string;
     }
     role: string;
     isVerified: boolean;
+    activationTokenHash?: string;
+    activationExpiresAt?: Date;
     videos:Array<{videoId: string}>;
     comparePassword: (password: string) => Promise<boolean>;
-    signAccessToken: () => string;
-    signRefreshToken: () => string;
-
 };
 
 const userSchema: Schema<IUser> = new mongoose.Schema({
@@ -37,9 +37,16 @@ const userSchema: Schema<IUser> = new mongoose.Schema({
         },
         unique: true,
     },
+    // SEC-01: provider subject id — the only trusted link to an external identity.
+    googleId: {
+        type: String,
+        unique: true,
+        sparse: true,
+    },
     password: {
         type: String,
-        required: [true,"Please enter your password"],
+        // Optional: accounts created through a verified provider identity
+        // (OIDC-only) have no password.
         minLength: [6, "Password should be greater than 6 characters"],
         select: false,
     },
@@ -61,6 +68,16 @@ const userSchema: Schema<IUser> = new mongoose.Schema({
     isVerified: {
         type: Boolean,
         default: false,
+    },
+    // SEC-06: single-use activation credential. Only the SHA-256 hash of the
+    // token is stored; the raw token exists solely in the activation e-mail.
+    activationTokenHash: {
+        type: String,
+        select: false,
+    },
+    activationExpiresAt: {
+        type: Date,
+        select: false,
     },
     videos: [
         {
@@ -91,21 +108,7 @@ userSchema.pre<IUser>("save", async function (next) {
   ): Promise<boolean> {
     return await bcrypt.compare(enteredPassword, this.password);
   };
-  
-  //sign access token
-  userSchema.methods.signAccessToken = function () {
-    return jwt.sign({ id: this._id }, process.env.ACCESS_TOKEN || "", {
-      expiresIn: "7d",
-    });
-  };
-  
-  //sign refresh token
-  userSchema.methods.signRefreshToken = function () {
-    return jwt.sign({ id: this._id }, process.env.REFRESH_TOKEN || "", {
-      expiresIn: "30d",
-    });
-  };
-  
+
   const userModel: Model<IUser> = mongoose.model("User", userSchema);
   
   export default userModel;

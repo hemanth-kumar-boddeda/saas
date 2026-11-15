@@ -2,7 +2,6 @@
 import React, { FC, useState } from 'react'
 import SidebarProfile from './SidebarProfile'
 import { useLogOutQuery } from '../../../redux/features/auth/authApi'
-import { signOut } from 'next-auth/react'
 import ProfileInfo from './ProfileInfo'
 import ChangePassword from './ChangePassword';
 
@@ -19,7 +18,6 @@ const Profile:FC<Props> = ({user}) => {
 
     const  logOutHandler =async () => {
         setLogout(true);
-        await signOut();
     }
 
 

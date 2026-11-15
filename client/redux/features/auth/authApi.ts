@@ -32,7 +32,7 @@ export const authApi = apiSlice.injectEndpoints({
     }),
     activation: builder.mutation({
       query: ({ active_token, active_code }) => ({
-        url: "auth-active-user",
+        url: "auth/active-user",
         method: "POST",
         body: { active_token, active_code },
         credentials: "include" as const,
@@ -49,10 +49,7 @@ export const authApi = apiSlice.injectEndpoints({
         try {
           const result = await queryFulfilled;
           dispatch(
-            userLogin({
-              accessToken: result.data.accessToken,
-              user: result.data.user,
-            })
+            userLogin({ user: result.data.user })
           );
         } catch (error: any) {
           console.log(error);
@@ -60,20 +57,18 @@ export const authApi = apiSlice.injectEndpoints({
       },
     }),
     socialAuth: builder.mutation({
-      query: ({ email, name, avatar }) => ({
+      // SEC-01: only a provider ID token is sent; the browser never asserts identity.
+      query: ({ idToken }: { idToken: string }) => ({
         url: "auth/social-auth",
         method: "POST",
-        body: { email, name, avatar },
+        body: { idToken },
         credentials: "include" as const,
       }),
       async onQueryStarted(arg, { queryFulfilled, dispatch }) {
         try {
           const result = await queryFulfilled;
           dispatch(
-            userLogin({
-              accessToken: result.data.accessToken,
-              user: result.data.user,
-            })
+            userLogin({ user: result.data.user })
           );
         } catch (error: any) {
           console.log(error);

@@ -3,23 +3,63 @@ import userModel, { IUser } from "../models/user.model";
 import ErrorHandler from "../utils/ErrorHandler";
 import { CatchAsyncError } from "../middleware/catchAsyncErrors";
 import jwt, { JwtPayload, Secret } from "jsonwebtoken";
-import ejs from "ejs";
-import path from "path";
 import cloudinary from "cloudinary";
 import sendMail from "../utils/sendMail";
 import {
+  ACCESS_COOKIE,
   accessTokenOptions,
+  REFRESH_COOKIE,
   refreshTokenOptions,
+  signAccessToken,
+  signRefreshToken,
+  newTokenId,
   sendToken,
+  clearAuthCookies,
 } from "../utils/jwt";
+import {
+  getSession,
+  revokeSession,
+  rotateSessionToken,
+  updateSessionUser,
+} from "../utils/session";
+import { toSafeUser } from "../utils/safeUser";
 import { redis } from "../utils/redis";
 import {
   getAllUsersService,
   getUserById,
   updateUserRoleService,
 } from "../services/user.service";
+import { OAuth2Client } from "google-auth-library";
+import { maybeBootstrapPlatformAdmin } from "../utils/bootstrap";
 
 require("dotenv").config();
+
+// SEC-01: one Google OAuth client, server-side. verifyIdToken checks the
+// signature, issuer, audience and expiry of the ID token; we additionally
+// require a provider-verified e-mail before any account is resolved.
+const getGoogleClient = (): OAuth2Client => {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  if (!clientId) {
+    throw new Error("GOOGLE_CLIENT_ID is not configured");
+  }
+  return new OAuth2Client(clientId);
+};
+
+// SEC-02: audited platform-admin bootstrap after a verified login only.
+const applyPlatformAdminBootstrap = async (user: any): Promise<void> => {
+  if (user.role === "admin") return;
+  if (!maybeBootstrapPlatformAdmin(user.email)) return;
+  user.role = "admin";
+  await user.save();
+  // Audit trail until the Phase 2 audit_event table exists.
+  console.log(
+    JSON.stringify({
+      event: "platform_admin_bootstrap",
+      userId: String(user._id),
+      at: new Date().toISOString(),
+    })
+  );
+};
 
 //register user
 interface IRegistrationBody {
@@ -47,17 +87,17 @@ export const registrationUser = CatchAsyncError(
       const activeToken = createActiveToken(user);
       const activeCode = activeToken.activeCode;
 
-      const data = { user: { name: user.name }, activeCode };
-      const html = await ejs.renderFile(
-        path.join(__dirname, "../mails/active_mail.ejs"),
-        data
-      );
+      const data = {
+        user: { name: user.name },
+        activeCode,
+        ttlMinutes: 5,
+      };
 
       try {
         await sendMail({
           email: user.email,
           subject: "Active your account 🔑",
-          template: "active_mail.ejs",
+          template: "activation-mail.ejs",
           data,
         });
         res.status(201).json({
@@ -149,7 +189,9 @@ export const loginUser = CatchAsyncError(
         return next(new ErrorHandler(400,"Invalid email or password"));
       }
 
-      sendToken(user, 200, res);
+      await applyPlatformAdminBootstrap(user);
+
+      await sendToken(user, 200, res);
     } catch (err: any) {
       return next(new ErrorHandler(400,err.message));
     }
@@ -160,10 +202,12 @@ export const loginUser = CatchAsyncError(
 export const logoutUser = CatchAsyncError(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      res.cookie("access_token", "", { maxAge: 1 });
-      res.cookie("refresh_token", "", { maxAge: 1 });
-      const userId = req.user?._id || "";
-      redis.del(userId);
+      if (!req.sessionId) {
+        return next(new ErrorHandler(401, "Please login to access this resource"));
+      }
+
+      await revokeSession(req.sessionId);
+      clearAuthCookies(res);
 
       res.status(200).json({
         success: true,
@@ -176,89 +220,178 @@ export const logoutUser = CatchAsyncError(
 );
 
 //generate new access token
-export const generateAccessToken = CatchAsyncError(
-  async (req: Request, res: Response, next: NextFunction) => {
+const createAccessTokenMiddleware = (forceRefresh = false) =>
+  CatchAsyncError(
+    async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const refresh_token = req.cookies.refresh_token as string;
-      const decoded = jwt.verify(
-        refresh_token,
-        process.env.REFRESH_TOKEN as string
-      ) as JwtPayload;
-
-      const message = "Could not refresh token";
-
-      if (!decoded) {
-        return next(new ErrorHandler(400,message));
+      if (!forceRefresh) {
+        const accessToken =
+          req.cookies?.[ACCESS_COOKIE] ||
+          req.headers.authorization?.split(" ")[1];
+        if (accessToken) {
+          try {
+            jwt.verify(accessToken, process.env.ACCESS_TOKEN as string);
+            return next();
+          } catch {
+            // Use the refresh token when the access token is invalid or expired.
+          }
+        }
       }
 
-      const session = await redis.get(decoded.id as string);
+      const refreshToken = req.cookies?.[REFRESH_COOKIE] as string | undefined;
+      // Missing refresh token is an authentication failure, not a bad request.
+      if (!refreshToken) {
+        return next(new ErrorHandler(401, "Please login to access this resource"));
+      }
 
-      if (!session) {
+      let decoded: JwtPayload;
+      try {
+        decoded = jwt.verify(
+          refreshToken,
+          process.env.REFRESH_TOKEN as string
+        ) as JwtPayload;
+      } catch {
+        return next(new ErrorHandler(401, "Invalid or expired refresh token"));
+      }
+
+      if (!decoded.id || !decoded.sid || !decoded.jti) {
         return next(
-          new ErrorHandler(400,"Please login for access this resources!")
+          new ErrorHandler(401, "Invalid or expired refresh token")
         );
       }
 
-      const user = JSON.parse(session);
+      const sessionId = String(decoded.sid);
+      const session = await getSession(sessionId);
+      if (
+        !session ||
+        session.userId !== String(decoded.id) ||
+        session.refreshTokenId !== String(decoded.jti)
+      ) {
+        return next(new ErrorHandler(401, "Invalid or expired refresh token"));
+      }
 
-      const accessToken = jwt.sign(
-        { id: user._id },
-        process.env.ACCESS_TOKEN as string,
-        { expiresIn: "7d" }
+      const tokenId = newTokenId();
+      await rotateSessionToken(sessionId, tokenId);
+      const accessToken = signAccessToken(session.userId, sessionId);
+      const rotatedRefreshToken = signRefreshToken(
+        session.userId,
+        sessionId,
+        tokenId
       );
-
-      const refreshToken = jwt.sign(
-        { id: user._id },
-        process.env.REFRESH_TOKEN as string,
-        { expiresIn: "30d" }
+      res.cookie(
+        ACCESS_COOKIE,
+        accessToken,
+        accessTokenOptions
       );
-
-      req.user = user;
-
-      res.cookie("access_token", accessToken, accessTokenOptions);
-      res.cookie("refresh_token", refreshToken, refreshTokenOptions);
-
-      await redis.set(user._id, JSON.stringify(user), "EX", 604800); //7days
+      res.cookie(
+        REFRESH_COOKIE,
+        rotatedRefreshToken,
+        refreshTokenOptions
+      );
+      req.cookies[ACCESS_COOKIE] = accessToken;
+      req.cookies[REFRESH_COOKIE] = rotatedRefreshToken;
+      req.user = session.user;
+      req.sessionId = sessionId;
 
       next();
     } catch (err: any) {
-      return next(new ErrorHandler(400,err.message));
+      return next(err);
     }
-  }
-);
+    }
+  );
+
+export const generateAccessToken = createAccessTokenMiddleware();
+export const refreshAccessToken = createAccessTokenMiddleware(true);
 
 //get user info
 export const getUserInfo = CatchAsyncError(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = req.user?._id;
-      getUserById(userId, res);
+      const user = req.user;
+      if (!user?._id) {
+        return res.status(401).json({ success: false, message: "Unauthorized" });
+      }
+
+      return res.status(200).json({ success: true, user });
     } catch (err: any) {
       return next(new ErrorHandler(400,err.message));
     }
   }
 );
 
-//social auth
+//social auth — SEC-01: identity comes from a provider-verified Google ID
+//token only. The browser can never assert an e-mail, name or avatar.
 interface ISocialAuthBody {
-  email: string;
-  name: string;
-  avatar: string;
+  idToken?: string;
 }
 
 export const socialAuth = CatchAsyncError(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { name, email, avatar } = req.body as ISocialAuthBody;
-      const user = await userModel.findOne({ email });
-      if (!user) {
-        const newUser = await userModel.create({ email, name, avatar });
-        sendToken(newUser, 200, res);
-      } else {
-        sendToken(user, 200, res);
+      const { idToken } = req.body as ISocialAuthBody;
+
+      if (!idToken || typeof idToken !== "string") {
+        return next(new ErrorHandler(401, "Invalid social login request"));
       }
+      if (!process.env.GOOGLE_CLIENT_ID) {
+        // Fail closed while the owner has not configured Google credentials.
+        return next(new ErrorHandler(503, "Social login is not configured"));
+      }
+
+      let payload;
+      try {
+        const ticket = await getGoogleClient().verifyIdToken({
+          idToken,
+          audience: process.env.GOOGLE_CLIENT_ID,
+        });
+        payload = ticket.getPayload();
+      } catch {
+        // Bad signature, wrong audience, expired token, malformed JWT, ...
+        return next(new ErrorHandler(401, "Social login failed"));
+      }
+
+      if (!payload || !payload.sub || !payload.email) {
+        return next(new ErrorHandler(401, "Social login failed"));
+      }
+      if (payload.email_verified !== true) {
+        return next(new ErrorHandler(403, "E-mail not verified by provider"));
+      }
+
+      const email = payload.email.toLowerCase();
+
+      // Resolve by provider subject first, then link to an existing account
+      // that owns the same provider-verified e-mail.
+      let user = await userModel.findOne({ googleId: payload.sub });
+      if (!user) {
+        const byEmail = await userModel.findOne({ email });
+        if (byEmail) {
+          if (byEmail.googleId && byEmail.googleId !== payload.sub) {
+            return next(
+              new ErrorHandler(403, "Social account conflict")
+            );
+          }
+          byEmail.googleId = payload.sub;
+          await byEmail.save();
+          user = byEmail;
+        }
+      }
+
+      if (!user) {
+        // Never privileged: role comes from the schema default only.
+        user = await userModel.create({
+          name: payload.name || email,
+          email,
+          googleId: payload.sub,
+          avatar: { url: payload.picture || "" },
+          isVerified: true,
+        });
+      }
+
+      await applyPlatformAdminBootstrap(user);
+
+      await sendToken(user, 200, res);
     } catch (err: any) {
-      return next(new ErrorHandler(400,err.message));
+      return next(new ErrorHandler(401, "Social login failed"));
     }
   }
 );
@@ -274,7 +407,13 @@ export const updateUserInfo = CatchAsyncError(
     try {
       const { name } = req.body as IUpdateUserInfo;
       const userId = req.user?._id;
+      if (!userId || !req.sessionId) {
+        return next(new ErrorHandler(401, "Please login to access this resource"));
+      }
       const user = await userModel.findById(userId);
+      if (!user) {
+        return next(new ErrorHandler(404, "User not found"));
+      }
 
       // if (email && user) {
       //   const isEmailExist = await userModel.findOne({ email });
@@ -288,11 +427,10 @@ export const updateUserInfo = CatchAsyncError(
         user.name = name;
       }
 
-      await user?.save();
+      await user.save();
+      await updateSessionUser(req.sessionId, user);
 
-      await redis.set(userId, JSON.stringify(user));
-
-      res.status(201).json({ success: true, user });
+      res.status(201).json({ success: true, user: toSafeUser(user) });
     } catch (err: any) {
       return next(new ErrorHandler(400,err.message));
     }
@@ -312,7 +450,10 @@ export const updateUserPassword = CatchAsyncError(
       if (!oldPassword || !newPassword) {
         return next(new ErrorHandler(400,"Please enter old and new password"));
       }
-      const user = await userModel.findById(req.user?._id).select("+password");
+      if (!req.user?._id || !req.sessionId) {
+        return next(new ErrorHandler(401, "Please login to access this resource"));
+      }
+      const user = await userModel.findById(req.user._id).select("+password");
       if (user?.password === undefined) {
         return next(new ErrorHandler(400,"Invalid user"));
       }
@@ -322,9 +463,9 @@ export const updateUserPassword = CatchAsyncError(
       }
       user.password = newPassword;
       await user.save();
-      await redis.set(req.user?._id, JSON.stringify(user));
+      await updateSessionUser(req.sessionId, user);
 
-      res.status(201).json({ success: true, user });
+      res.status(201).json({ success: true, user: toSafeUser(user) });
     } catch (err: any) {
       return next(new ErrorHandler(400,err.message));
     }
@@ -341,7 +482,13 @@ export const updateUserAvatar = CatchAsyncError(
     try {
       const { avatar } = req.body as IUpdateUserAvatar;
       const userId = req?.user?._id;
+      if (!userId || !req.sessionId) {
+        return next(new ErrorHandler(401, "Please login to access this resource"));
+      }
       const user = await userModel.findById(userId);
+      if (!user) {
+        return next(new ErrorHandler(404, "User not found"));
+      }
       if (avatar && user) {
         //if user have one avatar then call this if
         if (user?.avatar?.public_id) {
@@ -366,9 +513,9 @@ export const updateUserAvatar = CatchAsyncError(
           };
         }
       }
-      await user?.save();
-      await redis.set(userId, JSON.stringify(user));
-      res.status(201).json({ success: true, user });
+      await user.save();
+      await updateSessionUser(req.sessionId, user);
+      res.status(201).json({ success: true, user: toSafeUser(user) });
     } catch (err: any) {
       return next(new ErrorHandler(400, err.message));
     }
@@ -391,6 +538,10 @@ export const updateUserRole = CatchAsyncError(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id, role } = req.body;
+      // SEC-02: role values are a closed set — no arbitrary privilege strings.
+      if (!["admin", "user"].includes(role)) {
+        return next(new ErrorHandler(400, "Invalid role"));
+      }
       updateUserRoleService(res, id, role);
     } catch (err: any) {
       return next(new ErrorHandler(400, err.message));

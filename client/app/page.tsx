@@ -1,41 +1,81 @@
-"use client"
-import React, { FC, useState } from "react";
-import Footer from "./components/Footer/Footer";
-import Hero from "./components/Hero/Hero";
-import FAQ from "./components/Route/FAQ";
-import Reviews from "./components/Route/Reviews";
-import Videos from "./components/Route/Videos";
-import Heading from "./utils/Heading";
-import Navbar from "./components/Navbar/Navbar";
-interface Props {}
+import type { Metadata } from "next";
+import MarketingNavbar from "./components/landing/MarketingNavbar";
+import HeroSection from "./components/landing/HeroSection";
+import ProductShowcase from "./components/landing/ProductShowcase";
+import TaglineReveal from "./components/landing/TaglineReveal";
+import ProblemSolutionSection from "./components/landing/ProblemSolutionSection";
+import BenefitsSection from "./components/landing/BenefitsSection";
+import WorkflowSteps from "./components/landing/WorkflowSteps";
+import FeatureShowcase from "./components/landing/FeatureShowcase";
+import TeamWorkflow from "./components/landing/TeamWorkflow";
+import FAQSection from "./components/landing/FAQSection";
+import FinalCTA from "./components/landing/FinalCTA";
+import MarketingFooter from "./components/landing/MarketingFooter";
+import { FAQS } from "./components/landing/faqs";
 
-const Page: FC<Props> = (props) => {
-  const [open, setOpen] = useState(false);
-  const [activeItem, setActiveItem] = useState(0);
-  const [route, setRoute] = useState("Login");
-  return (
-    <div>
-      <Heading
-        title="VIDTOUCH // Learning Management System"
-        description="VIDTOUCH is an online editing marketplace with over 213000 videos and 62 million editors. Learn editing, marketing, and more."
-        keywords="editing community, editing skills, expert insights"
-      />
-        
-      {/* <Navbar
-        open={open}
-        setOpen={setOpen}
-        activeItem={activeItem}
-        setActiveItem={setActiveItem}
-        route={route}
-        setRoute={setRoute}
-      /> */}
-      <Hero />
-      <Videos />
-      <Reviews />
-      <FAQ />
-      <Footer />
-    </div>
-  );
+export const metadata: Metadata = {
+  title: "CreatorFlow, your YouTube workflow in one workspace",
+  description:
+    "CreatorFlow keeps uploads, versions, review notes, approval and publishing details for a YouTube video in one workspace.",
 };
 
-export default Page;
+const FAQ_JSON_LD = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: FAQS.map(({ question, answer }) => ({
+    "@type": "Question",
+    name: question,
+    acceptedAnswer: { "@type": "Answer", text: answer },
+  })),
+};
+
+const APP_JSON_LD = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "CreatorFlow",
+  applicationCategory: "BusinessApplication",
+  operatingSystem: "Web",
+  description:
+    "A workspace for YouTube production that keeps uploads, versions, review notes, approval and publishing details together.",
+};
+
+export default function Page() {
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(FAQ_JSON_LD) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(APP_JSON_LD) }}
+      />
+
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded focus:bg-cf-surface focus:px-4 focus:py-2 focus:caption-2 focus:text-cf-text"
+      >
+        Skip to content
+      </a>
+
+      <div className="cf-root min-h-screen bg-cf-bg font-cf text-cf-text">
+        <MarketingNavbar />
+
+        <main id="main">
+          <HeroSection />
+          <ProductShowcase />
+          <TaglineReveal />
+          <ProblemSolutionSection />
+          <BenefitsSection />
+          <WorkflowSteps />
+          <FeatureShowcase />
+          <TeamWorkflow />
+          <FAQSection />
+          <FinalCTA />
+        </main>
+
+        <MarketingFooter />
+      </div>
+    </>
+  );
+}

@@ -13,7 +13,9 @@ export const store = configureStore({
     getDefaultMiddleware().concat(apiSlice.middleware),
 });
 
-const initializeApp = async () => {
+// Session probe. Runs from the app shell, not on import, so public marketing
+// pages never call the session endpoints.
+export const initializeApp = async () => {
   await store.dispatch(
     apiSlice.endpoints.refreshToken.initiate({}, { forceRefetch: true })
   );
@@ -22,5 +24,3 @@ const initializeApp = async () => {
     apiSlice.endpoints.loadUser.initiate({}, { forceRefetch: true })
   );
 };
-
-initializeApp();

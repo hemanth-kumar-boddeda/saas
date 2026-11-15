@@ -2,101 +2,74 @@ import { useGetAllVideoUserQuery } from "@/redux/features/videos/videosApi";
 import React, { useEffect, useState } from "react";
 import VideoCard from "../Cards/VideoCard";
 import Loader from "../Loader/Loader";
+import { useRouter } from "next/navigation";
+import Lottie from "lottie-react";
+import noDataAnimation from "../../../public/assets/no-data.json"; // make sure this path is correct
 
 type Props = {};
 
 const Videos = (props: Props) => {
+  const router = useRouter();
   const { data, isLoading } = useGetAllVideoUserQuery({});
   const [topRated, setTopRated] = useState<any[]>([]);
   const [newest, setNewest] = useState<any[]>([]);
   const [popular, setPopular] = useState<any[]>([]);
+
   useEffect(() => {
-    // Filter videos with rating >= 4
-    const sortTopRatedVideos = [...(data?.videos || [])].filter(
-      (video: any) => video?.ratings >= 4
+    const videos = data?.videos || [];
+
+    setTopRated(videos.filter((v: any) => v.ratings >= 4).slice(0, 8));
+    setNewest(
+      [...videos].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 8)
     );
-    const topRatedVideos = sortTopRatedVideos.slice(0, 8);
-    setTopRated(topRatedVideos);
-    // Filter
-    const sortNewestVideos = [...(data?.videos || [])].sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    setPopular(
+      [...videos]
+        .filter((v: any) => v.purchased >= 10)
+        .sort((a, b) => b.purchased - a.purchased)
+        .slice(0, 8)
     );
-    const newestVideos = sortNewestVideos.slice(0, 8);
-    setNewest(newestVideos);
-    // Filter popular videos
-    const sortPopularVideos = [...(data?.videos || [])]
-      .filter((video: any) => video.purchased >= 10)
-      .sort((a, b) => b.purchased - a.purchased);
-    const popularVideos = sortPopularVideos.slice(0, 8);
-    setPopular(popularVideos);
   }, [data]);
 
+  const renderEmptyState = () => (
+    <div className="flex flex-col items-center justify-center w-full h-96 mt-10">
+      <Lottie animationData={noDataAnimation} loop={true} className="w-60 h-60" />
+      <p className="mt-4 text-center text-gray-500 dark:text-gray-400 text-lg">
+        No videos available right now. Check back later or explore other sections!
+      </p>
+    </div>
+  );
+
+  const renderSection = (title: string, videosArray: any[]) => (
+    <section className="mb-12">
+      <h2 className="font-Poppins text-2xl lg:text-3xl font-bold dark:text-white text-black mb-4">
+        {title}
+      </h2>
+      {isLoading ? (
+        <Loader />
+      ) : videosArray.length > 0 ? (
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 1500px:grid-cols-4 mb-6">
+          {videosArray.map((item: any, index: number) => (
+            <VideoCard item={item} key={index} />
+          ))}
+        </div>
+      ) : (
+        renderEmptyState()
+      )}
+    </section>
+  );
+
   return (
-    <div>
-      <div className={`w-[90%] 800px:w-[80%] m-auto`}>
-        <h1 className="text-center font-Poppins text-[25px] leading-[35px] sm:text-3l lg:text-4xl dark:text-white 800px:!leading-[60px] text-[#000] font-[700] tracking-tight">
-          Expand Your Video{" "}
-          <span className="text-transparent bg-clip-text bg-gradient-to-r dark:from-purple-400 dark:to-pink-600 from-[#96EFFF] to-[#5FBDFF]">
-            Quality
-          </span>{" "}
-          <br />
-          With Our Videos
-        </h1>
-        <br />
-        <br />
-        {/* Newest */}
-        <section>
-          <h1 className="font-Poppins text-[20px] leading-[35px] sm:text-2l lg:text-3xl dark:text-white 800px:!leading-[60px] text-[#000] font-[700] tracking-tight mb-4">
-            Newest
-          </h1>
-          {isLoading ? (
-            <Loader />
-          ) : (
-            <div className="grid grid-cols-1 gap-[20px] md:grid-cols-2 md:gap-[25px] lg:grid-cols-3 lg:gap-[25px] 1500px:grid-cols-4 1500px:gap-[35px] mb-20 border-0">
-              {newest.map((item: any, index: number) => (
-                <>
-                  <VideoCard item={item} key={index} />
-                </>
-              ))}
-            </div>
-          )}
-        </section>
-        {/* Top Rated */}
-        <section>
-          <h1 className="font-Poppins text-[20px] leading-[35px] sm:text-2l lg:text-3xl dark:text-white 800px:!leading-[60px] text-[#000] font-[700] tracking-tight mb-4">
-            Top Rated
-          </h1>
-          {isLoading ? (
-            <Loader />
-          ) : (
-            <div className="grid grid-cols-1 gap-[20px] md:grid-cols-2 md:gap-[25px] lg:grid-cols-3 lg:gap-[25px] 1500px:grid-cols-4 1500px:gap-[35px] mb-20 border-0">
-              {topRated.map((item: any, index: number) => (
-                <>
-                  <VideoCard item={item} key={index} />
-                </>
-              ))}
-            </div>
-          )}
-        </section>
-        {/* Popular */}
-        <section>
-          <h1 className="font-Poppins text-[20px] leading-[35px] sm:text-2l lg:text-3xl dark:text-white 800px:!leading-[60px] text-[#000] font-[700] tracking-tight mb-4">
-            Popular
-          </h1>
-          {isLoading ? (
-            <Loader />
-          ) : (
-            <div className="grid grid-cols-1 gap-[20px] md:grid-cols-2 md:gap-[25px] lg:grid-cols-3 lg:gap-[25px] 1500px:grid-cols-4 1500px:gap-[35px] mb-20 border-0">
-              {popular.map((item: any, index: number) => (
-                <>
-                  <VideoCard item={item} key={index} />
-                </>
-              ))}
-            </div>
-          )}
-        </section>
-      </div>
+    <div className="w-[90%] 800px:w-[80%] m-auto">
+      <h1 className="text-center font-Poppins text-3xl sm:text-4xl lg:text-5xl font-bold text-black dark:text-white mb-8">
+        Expand Your Video{" "}
+        <span className="text-transparent bg-clip-text bg-gradient-to-r dark:from-purple-400 dark:to-pink-600 from-[#96EFFF] to-[#5FBDFF]">
+          Quality
+        </span>
+      </h1>
+
+      {renderSection("Newest", newest)}
+      {renderSection("Top Rated", topRated)}
+      {renderSection("Popular", popular)}
     </div>
   );
 };

@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import React, { FC, useEffect, useState } from "react";
+import React, { FC, useState } from "react";
 import NavItems from "./NavItems";
 import { ThemeSwitcher } from "../../utils/ThemeSwitcher";
 import { HiOutlineMenuAlt3 } from "react-icons/hi";
@@ -9,14 +9,8 @@ import MModal from "../Modal/MModal";
 import Login from "../../components/Auth/Login";
 import SignUp from "../../components/Auth/SignUp";
 import Verification from "../../components/Auth/Verification";
-import { useSession } from "next-auth/react";
 import Image from "next/image";
 import avatar from "../../../public/assets/avatar.png";
-import {
-  useLogOutQuery,
-  useSocialAuthMutation,
-} from "@/redux/features/auth/authApi";
-import { toast } from "react-toastify";
 import { useLoadUserQuery } from "@/redux/features/api/apiSlice";
 import { usePathname } from "next/navigation";
 
@@ -32,42 +26,11 @@ const Navbar: FC<Props> = ({ open, setOpen, route, setRoute }) => {
   const [openSidebar, setOpenSidebar] = useState(false);
   const {
     data: userData,
-    isLoading,
     refetch,
   } = useLoadUserQuery(undefined, {});
-  const { data } = useSession();
-  const [socialAuth, { isSuccess }] = useSocialAuthMutation();
-  const [logout, setLogout] = useState(false);
-  const {} = useLogOutQuery(undefined, {
-    skip: !logout ? true : false,
-  });
   const pathname = usePathname();
 
- 
-  useEffect(() => {
-    if (!isLoading) {
-      if (!userData) {
-        if (data) {
-          socialAuth({
-            email: data?.user?.email,
-            name: data?.user?.name,
-            avatar: data?.user?.image,
-          });
-          refetch();
-        }
-      }
-      if (data === null) {
-        if (isSuccess) {
-          toast.success("Login successfully!");
-        }
-      }
-      if (data === null && !isLoading && !userData) {
-        setLogout(true);
-      }
-    }
-  }, [data, userData, isLoading, socialAuth, refetch, isSuccess]);
-
-    if (typeof window !== "undefined") {
+  if (typeof window !== "undefined") {
       window.addEventListener("scroll", () => {
         if (window.screenY > 85) {
           setActive(true);
@@ -101,7 +64,7 @@ const Navbar: FC<Props> = ({ open, setOpen, route, setRoute }) => {
           <div className="w-full h-[80px] flex items-center justify-between p-3">
             <div>
               <Link
-                href={"/"}
+                href={"/marketplace"}
                 className={`text-[25px] font-Poppins font-[600] text-black dark:text-white whitespace-nowrap flex items-center`}
               >
                 <Image
@@ -220,7 +183,7 @@ const Navbar: FC<Props> = ({ open, setOpen, route, setRoute }) => {
           )}
         </>
       )}
-     {route === "Sign-up" && (
+      {route === "Sign-Up" && (
         <>
           {open && (
             <MModal

@@ -4,7 +4,10 @@ import { ThemeSwitcher } from '@/app/utils/ThemeSwitcher';
 import { IoMdNotificationsOutline } from 'react-icons/io';
 import socketIO from "socket.io-client";
 const ENDPOINT = process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || "";
-const socketId = socketIO(ENDPOINT, {transports: ["websocket"]});
+const socketId = socketIO(ENDPOINT, {
+  transports: ["websocket"],
+  withCredentials: true,
+});
 import {
     useGetAllNotificationsQuery,
     useUpdateNotificationStatusMutation,

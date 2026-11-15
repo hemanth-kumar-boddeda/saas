@@ -24,7 +24,7 @@ videoRouter.put("/add-review/:id",generateAccessToken,isAuthenticated,addReview)
 
 videoRouter.put("/add-reply",generateAccessToken,isAuthenticated,authorizeRoles("admin"),addReplyToReview);
 
-videoRouter.get("/get-all-videos",isAuthenticated,generateAccessToken,authorizeRoles("admin"),getAllVideoAdmin);
+videoRouter.get("/get-all-videos",generateAccessToken,isAuthenticated,authorizeRoles("admin"),getAllVideoAdmin);
 
 videoRouter.delete("/delete-video/:id",generateAccessToken,isAuthenticated,authorizeRoles("admin"),deleteVideo);
 

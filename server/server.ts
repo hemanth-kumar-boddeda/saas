@@ -13,6 +13,7 @@ import authRouter from "./routes/auth.route";
 import layoutRouter from "./routes/layout.route";
 import http from "http";
 import { initSocketServer } from "./socketServer";
+import { allowedOrigins } from "./config/env";
 
 import dotenv from 'dotenv';
 dotenv.config();
@@ -26,7 +27,7 @@ app.use(express.json({ limit: "50mb" }));
 // CORS (Cross-Origin Resource Sharing)
 app.use(
   cors({
-    origin: ["http://localhost:3000"],
+    origin: allowedOrigins(),
     credentials: true,
   })
 );

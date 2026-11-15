@@ -103,7 +103,7 @@ import {
             ) : (
               <div className="flex items-center justify-center flex-col w-full h-[50vh] mt-4">
                 <Image
-                  src={require("../../../../../public/assets/no_data.png")}
+                  src={require("../../../../public/assets/no_data.png")}
                   width={300}
                   height={300}
                   alt=""

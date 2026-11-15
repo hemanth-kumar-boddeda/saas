@@ -1,0 +1,14 @@
+# build output
+dist/
+build/
+.next/
+
+# local artifacts
+.playwright-mcp/
+coverage/
+*.tsbuildinfo
+
+# secrets: keep these out of git, copy .env.example and fill it in locally
+.env
+.env.*
+!.env.example

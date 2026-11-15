@@ -1,8 +1,14 @@
 import { Server as SocketIOServer } from "socket.io";
 import http from "http";
+import { allowedOrigins } from "./config/env";
 
 export const initSocketServer = (server: http.Server) => {
-  const io = new SocketIOServer(server);
+  const io = new SocketIOServer(server, {
+    cors: {
+      origin: allowedOrigins(),
+      credentials: true,
+    },
+  });
 
   io.on("connection", (socket) => {
     console.log("A user connected");

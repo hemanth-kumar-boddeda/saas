@@ -31,7 +31,7 @@ interface IVideoData extends Document {
   questions: IComment[];
 }
 
-interface IVideo extends Document {
+export interface IVideo extends Document {
   name: string;
   description: string;
   price: number;

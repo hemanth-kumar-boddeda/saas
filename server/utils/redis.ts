@@ -1,12 +1,19 @@
 import { Redis } from "ioredis";
-require("dotenv").config();
+import dotenv from "dotenv";
 
-const redisClient = () => {
-  if (process.env.REDIS_URL) {
-    console.log("Redis is connected");
-    return process.env.REDIS_URL;
-  }
-  throw new Error("Redis connection failed");
-};
+dotenv.config();
 
-export const redis = new Redis(redisClient());
+if (!process.env.REDIS_URL) {
+  throw new Error("❌ Redis connection failed: REDIS_URL not set");
+}
+
+// Upstash requires TLS + retry tweaks
+export const redis = new Redis(process.env.REDIS_URL, {
+  tls: {}, // enforce TLS
+  maxRetriesPerRequest: 1, // prevent retry storms
+  enableReadyCheck: false, // skip cluster readiness check
+  reconnectOnError: () => true, // auto-reconnect
+});
+
+redis.on("connect", () => console.log("✅ Redis connected"));
+redis.on("error", (err) => console.error("❌ Redis error:", err));

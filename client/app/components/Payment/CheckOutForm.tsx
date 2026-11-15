@@ -11,7 +11,10 @@ import { toast } from "react-toastify";
 import { redirect } from "next/navigation";
 import socketIO from "socket.io-client";
 const ENDPOINT = process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || "";
-const socketId = socketIO(ENDPOINT, { transports: ["websocket"] });
+const socketId = socketIO(ENDPOINT, {
+  transports: ["websocket"],
+  withCredentials: true,
+});
 
 type Props = {
   data: any;

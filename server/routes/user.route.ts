@@ -3,7 +3,7 @@ import {
   deleteUser,
   generateAccessToken,
   getAllUsers,
-  updateAvatar,
+  updateUserAvatar,
   updateUserInfo,
   updateUserPassword,
   updateUserRole,
@@ -16,7 +16,7 @@ const userRouter = express.Router();
 
 userRouter.put("/update-user-info", generateAccessToken, isAuthenticated, updateUserInfo);
 userRouter.put("/update-user-password", generateAccessToken, isAuthenticated, updateUserPassword);
-userRouter.put("/update-user-avatar", generateAccessToken, isAuthenticated, updateuserAvatar);
+userRouter.put("/update-user-avatar", generateAccessToken, isAuthenticated, updateUserAvatar);
 
 // Admin Routes
 userRouter.get("/get-users", generateAccessToken, isAuthenticated, authorizeRoles("admin"), getAllUsers);

@@ -7,7 +7,7 @@ import {
   AiOutlineArrowRight,
   AiOutlineStar,
 } from "react-icons/ai";
-import avatar from "../../../../public/assets/avatar.jpg";
+import avatar from "../../../public/assets/avatar.jpg";
 import Image from "next/image";
 import {
   useAddNewAnswerMutation,
@@ -23,7 +23,10 @@ import { VscVerifiedFilled } from "react-icons/vsc";
 import Ratings from "@/app/utils/Ratings";
 import socketIO from "socket.io-client";
 const ENDPOINT = process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || "";
-const socketId = socketIO(ENDPOINT, { transports: ["websocket"] });
+const socketId = socketIO(ENDPOINT, {
+  transports: ["websocket"],
+  withCredentials: true,
+});
 
 type Props = {
   data: any;

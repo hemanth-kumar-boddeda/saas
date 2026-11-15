@@ -16,7 +16,7 @@ const VideoContentList: FC<Props> = (props) => {
 
   //find unique video sections
   const videoSections: string[] = [
-    ...new Set<string>(props.data?.map((item: any) => item.videoSection)),
+    ...Array.from(new Set<string>(props.data?.map((item: any) => item.videoSection))),
   ];
 
   let totalCount: number = 0; //total count of video from previous sections

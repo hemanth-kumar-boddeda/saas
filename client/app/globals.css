@@ -13,10 +13,10 @@
     --foreground-rgb: 255, 255, 255;
     --background-start-rgb: 0, 0, 0;
     --background-end-rgb: 0, 0, 0;
-   
+
       --text-color-light: #000;
       --text-color-dark: #fff;
-    
+
   }
 }
 
@@ -49,7 +49,7 @@ input[type="number"] {
 
 body {
   color: rgb(var(--foreground-rgb));
- 
+
 }
 
 .hero_animation {
@@ -102,4 +102,422 @@ body {
 
 .shake {
   animation: shake 0.5s ease-in-out;
+}
+
+/* ------------------------------------------------------------------
+   CreatorFlow landing page
+   Motion curve: cubic-bezier(0.22, 1, 0.36, 1). Layout and position
+   transitions run 500ms, colour and opacity changes 300ms or longer.
+   Only transform and opacity are animated.
+------------------------------------------------------------------- */
+
+:root {
+  --cf-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --cf-text: #f2f2f2;
+  --cf-muted-word: #4a4a4a;
+  --cf-violet: #7c5cff;
+}
+
+.cf-root :focus-visible {
+  outline: 2px solid var(--cf-violet);
+  outline-offset: 2px;
+}
+
+.cf-scroll-offset {
+  scroll-margin-top: 96px;
+}
+
+/* Section reveal (transform + opacity only). */
+.cf-reveal {
+  opacity: 0;
+  transform: translateY(32px);
+  transition: opacity 700ms var(--cf-ease), transform 700ms var(--cf-ease);
+}
+
+.cf-reveal-in {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Mobile navigation entrance, staggered in reading order. */
+@keyframes cf-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.cf-menu-item {
+  animation: cf-menu-in 500ms var(--cf-ease) both;
+}
+
+/* Tagline reveal: words brighten one at a time as they cross the trigger. */
+.cf-word {
+  color: var(--cf-muted-word);
+  transition: color 500ms var(--cf-ease);
+}
+
+.cf-word-on {
+  color: var(--cf-text);
+}
+
+/* Permitted white to grey text gradient for the hero heading. */
+.cf-hero-gradient {
+  background-image: linear-gradient(90deg, #ffffff 0%, #9b9b9b 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Menu toggle morphs between its two states, transform and opacity only. */
+.cf-toggle-bar {
+  transition: transform 500ms var(--cf-ease), opacity 300ms var(--cf-ease);
+}
+
+.cf-toggle-open .cf-toggle-top {
+  transform: translateY(4px) rotate(45deg);
+}
+
+.cf-toggle-open .cf-toggle-bottom {
+  transform: translateY(-4px) rotate(-45deg);
+}
+
+.cf-toggle-open .cf-toggle-mid {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cf-reveal,
+  .cf-reveal-in {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .cf-menu-item {
+    animation: none;
+  }
+
+  .cf-word {
+    transition: none;
+  }
+
+  .cf-toggle-bar {
+    transition: none;
+  }
+}
+
+@layer components {
+  /* --------------------------------------------------------------
+     Named typography styles. Each style is defined once and reused.
+     Sizes, line heights and weights follow the design type scale.
+     -------------------------------------------------------------- */
+
+  .heading-1 {
+    font-size: 3.75rem;
+    line-height: 3.75rem;
+    font-weight: 600;
+    text-wrap: balance;
+  }
+
+  .heading-2 {
+    font-size: 3rem;
+    line-height: 3rem;
+    font-weight: 600;
+    text-wrap: balance;
+  }
+
+  .heading-3 {
+    font-size: 2.25rem;
+    line-height: 2.5rem;
+    font-weight: 600;
+    text-wrap: balance;
+  }
+
+  .heading-4 {
+    font-size: 1.875rem;
+    line-height: 2.25rem;
+    font-weight: 600;
+    text-wrap: balance;
+  }
+
+  .heading-5 {
+    font-size: 1.5rem;
+    line-height: 2rem;
+    font-weight: 600;
+    text-wrap: balance;
+  }
+
+  .heading-6 {
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+    font-weight: 600;
+    text-wrap: balance;
+  }
+
+  .title-1 {
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+    font-weight: 500;
+  }
+
+  .title-2 {
+    font-size: 1.125rem;
+    line-height: 1.75rem;
+    font-weight: 500;
+  }
+
+  .title-3 {
+    font-size: 1rem;
+    line-height: 1.5rem;
+    font-weight: 500;
+  }
+
+  .title-4 {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    font-weight: 500;
+  }
+
+  .title-5 {
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 500;
+  }
+
+  .body-1 {
+    font-size: 1rem;
+    line-height: 1.5rem;
+    font-weight: 600;
+    text-wrap: pretty;
+  }
+
+  .body-2 {
+    font-size: 1rem;
+    line-height: 1.5rem;
+    font-weight: 500;
+    text-wrap: pretty;
+  }
+
+  .body-3 {
+    font-size: 1rem;
+    line-height: 1.5rem;
+    font-weight: 400;
+    text-wrap: pretty;
+  }
+
+  .body-4 {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    font-weight: 600;
+    text-wrap: pretty;
+  }
+
+  .body-5 {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    font-weight: 500;
+    text-wrap: pretty;
+  }
+
+  .body-6 {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    font-weight: 400;
+    text-wrap: pretty;
+  }
+
+  .button-lg {
+    font-size: 1.125rem;
+    line-height: 1.75rem;
+    font-weight: 600;
+  }
+
+  .button-md {
+    font-size: 1rem;
+    line-height: 1.5rem;
+    font-weight: 600;
+  }
+
+  .button-sm {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    font-weight: 600;
+  }
+
+  .button-xsm {
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 600;
+  }
+
+  .caption-1 {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    font-weight: 500;
+  }
+
+  .caption-2 {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    font-weight: 400;
+  }
+
+  .caption-3 {
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 600;
+  }
+
+  .caption-4 {
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 500;
+  }
+
+  .caption-5 {
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 400;
+  }
+
+  /* Hero copy measure. */
+  .cf-measure {
+    max-width: 680px;
+  }
+
+  /* Responsive heading steps. Each step comes from the type scale, so the
+     same class covers phone, tablet and desktop without arbitrary sizes. */
+  .cf-hero-heading {
+    font-size: 1.875rem;
+    line-height: 2.25rem;
+    font-weight: 600;
+    text-wrap: balance;
+  }
+
+  .cf-section-heading {
+    font-size: 1.5rem;
+    line-height: 2rem;
+    font-weight: 600;
+    text-wrap: balance;
+  }
+
+  .cf-tagline {
+    font-size: 1.5rem;
+    line-height: 2rem;
+    font-weight: 600;
+    text-wrap: balance;
+  }
+
+  @media (min-width: 768px) {
+    .cf-hero-heading {
+      font-size: 2.25rem;
+      line-height: 2.5rem;
+    }
+
+    .cf-section-heading {
+      font-size: 1.875rem;
+      line-height: 2.25rem;
+    }
+
+    .cf-tagline {
+      font-size: 1.875rem;
+      line-height: 2.25rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .cf-section-heading {
+      font-size: 2.25rem;
+      line-height: 2.5rem;
+    }
+
+    .cf-tagline {
+      font-size: 2.25rem;
+      line-height: 2.5rem;
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .cf-hero-heading {
+      font-size: 3.75rem;
+      line-height: 3.75rem;
+    }
+  }
+
+  .cf-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-radius: 9999px;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: color 300ms var(--cf-ease), background-color 300ms var(--cf-ease),
+      border-color 300ms var(--cf-ease), opacity 300ms var(--cf-ease),
+      transform 500ms var(--cf-ease);
+  }
+
+  .cf-btn:active {
+    transform: scale(0.98);
+  }
+
+  .cf-btn-primary {
+    background-color: #7c5cff;
+    color: #ffffff;
+    padding: 8px 12px;
+  }
+
+  .cf-btn-primary:hover {
+    background-color: #6a4bf0;
+  }
+
+  .cf-btn-secondary {
+    background-color: #181818;
+    border: 1px solid #313131;
+    color: #f2f2f2;
+    padding: 8px 12px;
+  }
+
+  .cf-btn-secondary:hover {
+    border-color: #7c5cff;
+    color: #ffffff;
+  }
+
+  .cf-btn-sm {
+    padding: 8px 12px;
+  }
+
+  .cf-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid #313131;
+    border-radius: 9999px;
+    padding: 4px 12px;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 500;
+    color: #a3a3a3;
+  }
+
+  .cf-card {
+    background-color: #181818;
+    border: 1px solid #313131;
+    border-radius: 16px;
+  }
+
+  .cf-card-hover {
+    transition: border-color 300ms var(--cf-ease), background-color 300ms var(--cf-ease),
+      transform 500ms var(--cf-ease);
+  }
+
+  .cf-card-hover:hover {
+    border-color: #7c5cff;
+    transform: translateY(-4px);
+  }
 }
