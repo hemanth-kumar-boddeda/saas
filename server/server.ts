@@ -5,14 +5,8 @@ import mongoose from "mongoose";
 import { v2 as cloudinary } from "cloudinary";
 import { ErrorMiddleware } from "./middleware/error";
 import userRouter from "./routes/user.route";
-import videoRouter from "./routes/video.route";
-import orderRouter from "./routes/order.route";
-import notificationRouter from "./routes/notification.route";
-import analyticsRouter from "./routes/analytics.route";
 import authRouter from "./routes/auth.route";
-import layoutRouter from "./routes/layout.route";
 import http from "http";
-import { initSocketServer } from "./socketServer";
 import { allowedOrigins } from "./config/env";
 
 import dotenv from 'dotenv';
@@ -62,11 +56,6 @@ cloudinary.config({
 // Routes
 app.use("/v1/auth/", authRouter);
 app.use("/v1/users/", userRouter);
-app.use("/v1/videos/", videoRouter);
-app.use("/v1/orders/", orderRouter);
-app.use("/v1/notifications/", notificationRouter);
-app.use("/v1/analytics/", analyticsRouter);
-app.use("/v1/layout/", layoutRouter);
 
 app.get("/", (req: Request, res: Response) => {
   return res.send("Express Typescript on Vercel");
@@ -80,7 +69,6 @@ app.get("/ping", (req: Request, res: Response) => {
 app.use(ErrorMiddleware);
 
 // Initialize Socket.io server
-initSocketServer(server);
 
 // Connect to server
 const PORT = process.env.PORT || 3000;
