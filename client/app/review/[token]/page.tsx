@@ -7,7 +7,7 @@ import { errMsg, useEnterLinkMutation } from "../../../redux/features/review/rev
 const field = "w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm";
 
 export default function GuestPage() {
-  const { token } = useParams<{ token: string }>();
+  const token = String(useParams()?.token ?? "");
   const [enter, { isLoading }] = useEnterLinkMutation();
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
