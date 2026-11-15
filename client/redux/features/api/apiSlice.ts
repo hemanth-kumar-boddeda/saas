@@ -3,7 +3,19 @@ import { userLogin } from "../auth/authSlice";
 
 export const apiSlice = createApi({
     reducerPath: "api",
-    baseQuery: fetchBaseQuery({ baseUrl: process.env.NEXT_PUBLIC_SERVER_URL }),
+    baseQuery: fetchBaseQuery({
+        baseUrl: process.env.NEXT_PUBLIC_SERVER_URL,
+        credentials: "include",
+        prepareHeaders: (headers) => {
+            // Guests (opened a share link) authenticate with their review token.
+            if (typeof window !== "undefined" && window.location.pathname.startsWith("/review/")) {
+                const t = window.sessionStorage.getItem("guestToken");
+                if (t) headers.set("x-guest-token", t);
+            }
+            return headers;
+        },
+    }),
+    tagTypes: ["Projects", "Project", "Comments", "Approvals", "Links"],
     endpoints: (builder) => ({
         refreshToken: builder.query({
             query: (data) => ({

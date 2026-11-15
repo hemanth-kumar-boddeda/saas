@@ -4,8 +4,8 @@ export const navItemsData = [
       path: "/",
     },
     {
-      title: "Videos",
-      path: "/videos",
+      title: "Projects",
+      path: "/projects",
       keyword: "video",
     },
     {

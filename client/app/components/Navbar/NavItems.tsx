@@ -35,7 +35,7 @@ const NavItems: FC<Props> = ({ isMobile }) => {
         <div className="800px:hidden mt-5">
           <div className="w-full text-center py-6">
             <div className="w-full text-center pb-6">
-              <Link href="/marketplace" passHref>
+              <Link href="/projects" passHref>
                 <span
                   className={`text-[23px] font-Poppins font-[600] text-black dark:text-white whitespace-nowrap`}
                 >

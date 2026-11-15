@@ -64,7 +64,7 @@ const Navbar: FC<Props> = ({ open, setOpen, route, setRoute }) => {
           <div className="w-full h-[80px] flex items-center justify-between p-3">
             <div>
               <Link
-                href={"/marketplace"}
+                href={"/projects"}
                 className={`text-[25px] font-Poppins font-[600] text-black dark:text-white whitespace-nowrap flex items-center`}
               >
                 <Image

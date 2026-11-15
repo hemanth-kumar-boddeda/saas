@@ -12,12 +12,9 @@ import { initializeApp } from "./../redux/store";
 import Loader from "./components/Loader/Loader";
 import MainLayout from "./layouts/MainLayout";
 import { usePathname } from "next/navigation";
-import socketIO from "socket.io-client";
 import { GeistSans } from "geist/font/sans";
 
-const ENDPOINT = process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || "";
-
-// Marketing pages are public: no app shell, no session probe, no socket.
+// Marketing and guest review pages are public: no app shell, no session probe.
 const MARKETING_ROUTES = ["/", "/login", "/signup", "/privacy"];
 
 const poppins = Poppins({
@@ -35,7 +32,7 @@ const josefin = Josefin_Sans({
 
 export default function RootLayout({ children }: { children: React.ReactNode; }) {
   const pathname = usePathname();
-  const isMarketing = MARKETING_ROUTES.includes(pathname || "");
+  const isMarketing = MARKETING_ROUTES.includes(pathname || "") || (pathname || "").startsWith("/review/");
   return (
     <html lang="en">
       <body
@@ -48,11 +45,7 @@ export default function RootLayout({ children }: { children: React.ReactNode; })
                 <>{children}</>
               ) : (
                 <Custom>
-                  {pathname?.includes("admin") ? (
-                    <>{children}</>
-                  ) : (
-                    <MainLayout>{children}</MainLayout>
-                  )}
+                  <MainLayout>{children}</MainLayout>
                 </Custom>
               )}
               <ToastContainer
@@ -76,11 +69,6 @@ const Custom: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   useEffect(() => {
     initializeApp();
-    const socketId = socketIO(ENDPOINT, {
-      transports: ["websocket"],
-      withCredentials: true,
-    });
-    socketId.on("connect", () => {});
 
     const handleStart = (url: any) => {
       if (url !== window.location.pathname) {
@@ -102,7 +90,6 @@ const Custom: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
     return () => {
       window.removeEventListener("popstate", handleRouteChange);
-      socketId.disconnect();
     };
   }, []);
 
