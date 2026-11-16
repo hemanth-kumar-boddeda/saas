@@ -16,7 +16,7 @@ import {
 import { hashToken, newLinkToken, signGuestToken, signStreamToken, verifyStreamToken } from "../utils/reviewTokens";
 import { notifyProject, mailLink, reviewLinkUrl } from "../utils/notify";
 import { decrypt, encrypt } from "../services/publishLogic";
-import { probeDuration, toHls, probeAudioDuration, toVoiceM4a } from "../utils/transcode";
+import { probeDuration, toHls, probeAudioDuration, toVoiceM4a, makeSampleVideo } from "../utils/transcode";
 import { resolveKey, versionDir, storageRoot } from "../utils/storage";
 import { logger } from "../utils/logger";
 import { transcribe } from "../utils/ai";
@@ -54,6 +54,45 @@ export const createProject = CatchAsyncError(async (req: Request, res: Response)
   const { title } = parse(z.object({ title: z.string().trim().min(1).max(120) }), req.body);
   const p = await Project.create({ title, owner: req.user!._id });
   res.status(201).json({ success: true, project: projectJson(p, "owner") });
+});
+
+/**
+ * A ready-made project: two generated clips (so Compare works), a brief and a few notes, one already done.
+ * One per owner; calling again returns the same project.
+ */
+export const createSampleProject = CatchAsyncError(async (req: Request, res: Response) => {
+  const owner = req.user!._id;
+  const had: any = await Project.findOne({ owner, sample: true });
+  if (had) return res.json({ success: true, project: projectJson(had, "owner") });
+  const project: any = await Project.create({
+    title: "Sample: Brand reel", owner, sample: true, currentVersion: 2,
+    brief: "This is a sample project. Tighten the intro, add captions and lift the music. Open version 2, press Compare versions, then approve to see the AI publish kit.",
+  });
+  try {
+    for (const [number, pattern] of [[1, "testsrc2"], [2, "smptebars"]] as const) {
+      const dir = versionDir(String(project._id), number);
+      fs.mkdirSync(dir, { recursive: true });
+      const src = path.join(dir, "source.mp4");
+      await makeSampleVideo(src, pattern);
+      const v: any = await ProjectVersion.create({
+        project: project._id, number, kind: "upload", processing: "pending", uploadedByName: "Sample editor",
+        sourceKey: path.relative(storageRoot(), src), note: number === 1 ? "First cut" : "Notes applied",
+      });
+      void processVersion(String(v._id), src, path.join(dir, "hls"));
+      const note = (timecode: number, body: string, resolved = false) => ({
+        project: project._id, version: v._id, timecode, body, guestName: "Sample feedback", authorKey: "sample",
+        ...(resolved ? { status: "resolved", resolvedByName: "Sample editor" } : {}),
+      });
+      for (const c of number === 1
+        ? [note(1, "Tighten the intro, the hook lands late.", true), note(3.5, "Add captions along the bottom."), note(6, "Lift the music under the voice.")]
+        : [note(2, "Much better. Check the colours on this bar.")])
+        await ReviewComment.create(c);
+    }
+  } catch (e) {
+    await Promise.all([Project.deleteOne({ _id: project._id }), ProjectVersion.deleteMany({ project: project._id }), ReviewComment.deleteMany({ project: project._id })]);
+    throw e;
+  }
+  res.status(201).json({ success: true, project: projectJson(project, "owner") });
 });
 
 export const listProjects = CatchAsyncError(async (req: Request, res: Response) => {

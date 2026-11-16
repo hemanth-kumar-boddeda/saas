@@ -55,6 +55,7 @@ r.get("/stream/:vid/:file", c.serveStream);
 
 r.post("/projects", requireUser, c.createProject);
 r.get("/projects", requireUser, c.listProjects);
+r.post("/projects/sample", requireUser, c.createSampleProject);
 r.get("/projects/:id", any, c.getProject);
 r.post("/projects/:id/editors", member, c.addEditor);
 

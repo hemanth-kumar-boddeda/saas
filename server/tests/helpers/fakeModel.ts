@@ -35,6 +35,17 @@ export const createFakeModel = (defaults: Record<string, any> = {}) => {
       hit.forEach((r) => Object.assign(r, upd));
       return { matchedCount: hit.length };
     },
+    deleteOne: async (q: any) => {
+      const i = rows.findIndex((r) => matches(r, q));
+      if (i >= 0) rows.splice(i, 1);
+      return { deletedCount: i >= 0 ? 1 : 0 };
+    },
+    deleteMany: async (q: any) => {
+      const keep = rows.filter((r) => !matches(r, q));
+      const deletedCount = rows.length - keep.length;
+      rows.splice(0, rows.length, ...keep);
+      return { deletedCount };
+    },
     find: (q?: any) => chain(rows.filter((r) => matches(r, q))),
     findOne: async (q: any) => wrap(rows.find((r) => matches(r, q)) ?? null),
     findById: async (id: any) => wrap(rows.find((r) => same(r._id, id)) ?? null),

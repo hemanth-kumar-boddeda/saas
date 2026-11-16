@@ -7,6 +7,10 @@ export const reviewApi = apiSlice.injectEndpoints({
       query: (body) => ({ url: "projects", method: "POST", body }),
       invalidatesTags: ["Projects"],
     }),
+    createSampleProject: b.mutation<any, void>({
+      query: () => ({ url: "projects/sample", method: "POST" }),
+      invalidatesTags: ["Projects"],
+    }),
     getProject: b.query<any, string>({ query: (id) => `projects/${id}`, providesTags: ["Project"] }),
     addVersion: b.mutation<any, { id: string; form: FormData | { externalUrl: string; note?: string } }>({
       query: ({ id, form }) => ({ url: `projects/${id}/versions`, method: "POST", body: form }),
@@ -118,7 +122,7 @@ export const reviewApi = apiSlice.injectEndpoints({
 });
 
 export const {
-  useListProjectsQuery, useCreateProjectMutation, useGetProjectQuery, useAddVersionMutation, useStreamUrlQuery,
+  useListProjectsQuery, useCreateProjectMutation, useCreateSampleProjectMutation, useGetProjectQuery, useAddVersionMutation, useStreamUrlQuery,
   useListCommentsQuery, useAddCommentMutation, useAddVoiceCommentMutation, useSetCommentStatusMutation, useDecideMutation, useApprovalsQuery,
   useCreateLinkMutation, useListLinksQuery, useRevokeLinkMutation, useEnterLinkMutation,
   useGetKitQuery, useSetBriefMutation, useAddReferenceMutation, useDeleteReferenceMutation, useReferenceStreamQuery, useInviteEditorMutation, useSendFeedbackMutation, useLinkInfoQuery, useAddEditorMutation, useStartKitMutation, useEditKitMutation, useListChannelsQuery, useCreateChannelMutation, useSetProjectChannelMutation,

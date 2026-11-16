@@ -1,13 +1,17 @@
 "use client";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "react-toastify";
-import { errMsg, useCreateProjectMutation, useListProjectsQuery } from "../../../redux/features/review/reviewApi";
+import { errMsg, useCreateProjectMutation, useCreateSampleProjectMutation, useListProjectsQuery } from "../../../redux/features/review/reviewApi";
 import { StatusBadge } from "../../components/Review/ReviewScreen";
 
 export default function Projects() {
   const { data, isLoading, error } = useListProjectsQuery();
   const [create, { isLoading: creating }] = useCreateProjectMutation();
+  const [makeSample, { isLoading: sampling }] = useCreateSampleProjectMutation();
+  const router = useRouter();
+  const trySample = () => makeSample().unwrap().then((r) => router.push(`/projects/${r.project._id}`)).catch((er) => toast.error(errMsg(er)));
   const [title, setTitle] = useState("");
   const projects: any[] = data?.projects || [];
   return (
@@ -48,7 +52,9 @@ export default function Projects() {
       {!isLoading && !error && projects.length === 0 && (
         <div className="cf-card mt-8 p-10 text-center">
           <p className="text-lg font-medium">No projects yet</p>
-          <p className="mt-1 text-cf-muted">Create your first project above, then upload a video or paste an unlisted link.</p>
+          <p className="mt-1 text-cf-muted">Create your first project above, then upload a video or paste an unlisted link. Or see the whole loop first.</p>
+          <button className="cf-btn cf-btn-primary mt-4 px-5" onClick={trySample} disabled={sampling}>{sampling ? "Setting up the sample…" : "Try a sample project"}</button>
+          <p className="mt-3 text-xs text-cf-muted">Two generated test clips with notes already on them. It is yours to play with.</p>
         </div>
       )}
       <ul className="mt-8 grid gap-4 sm:grid-cols-2">

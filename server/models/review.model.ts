@@ -14,6 +14,7 @@ const projectSchema = new Schema(
       default: "in_review",
     },
     currentVersion: { type: Number, default: 0 },
+    sample: { type: Boolean, default: false }, // the generated demo project, one per owner
     channel: { type: Schema.Types.ObjectId, ref: "Channel" },
     // What the owner wants changed, plus reference videos for the editor.
     brief: { type: String, maxlength: 5000, default: "" },

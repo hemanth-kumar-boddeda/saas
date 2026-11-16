@@ -15,6 +15,14 @@ const run = (cmd: string, args: string[]) =>
     p.on("close", (code) => (code === 0 ? resolve(out) : reject(new Error(err.slice(-500)))));
   });
 
+/** Generated test-pattern clip with a tone, for the sample project. No asset files to ship. */
+export const makeSampleVideo = (out: string, pattern: "testsrc2" | "smptebars", seconds = 8) =>
+  run("ffmpeg", [
+    "-y", "-f", "lavfi", "-i", `${pattern}=size=640x360:rate=24:duration=${seconds}`,
+    "-f", "lavfi", "-i", `sine=frequency=${pattern === "testsrc2" ? 330 : 440}:duration=${seconds}`,
+    "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", "-shortest", out,
+  ]);
+
 /** Returns duration in seconds; throws when the file is not a playable video. */
 export const probeDuration = async (file: string): Promise<number> => {
   const out = await run("ffprobe", [
