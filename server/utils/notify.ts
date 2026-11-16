@@ -1,7 +1,7 @@
 // E-mail notifications for review events. Never throws: a mail failure must
 // not fail the request that caused it.
 import userModel from "../models/user.model";
-import sendMail from "./sendMail";
+import sendMail, { mailTransport } from "./sendMail";
 import { logger } from "./logger";
 
 interface Event {
@@ -14,7 +14,7 @@ interface Event {
 }
 
 export const notifyProject = async (e: Event) => {
-  if (!process.env.SMTP_MAIL) return; // mail not configured: skip silently
+  if (!mailTransport()) return; // mail not configured: skip silently
   try {
     const ids = [e.project.owner, ...(e.project.editors ?? [])]
       .map(String)
