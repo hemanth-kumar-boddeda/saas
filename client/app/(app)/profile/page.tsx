@@ -3,9 +3,9 @@ import React, { useState } from "react";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { useLoadUserQuery } from "../../redux/features/api/apiSlice";
-import { useUpdatePasswordMutation } from "../../redux/features/user/userApi";
-import { errMsg, useDisconnectAccountMutation, useListAccountsQuery } from "../../redux/features/review/reviewApi";
+import { useLoadUserQuery } from "../../../redux/features/api/apiSlice";
+import { useUpdatePasswordMutation } from "../../../redux/features/user/userApi";
+import { errMsg, useDisconnectAccountMutation, useListAccountsQuery } from "../../../redux/features/review/reviewApi";
 
 const NAMES: Record<string, string> = { youtube: "YouTube", instagram: "Instagram" };
 

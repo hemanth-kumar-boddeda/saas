@@ -2,8 +2,8 @@
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "react-toastify";
-import { errMsg, useCreateProjectMutation, useListProjectsQuery } from "../../redux/features/review/reviewApi";
-import { StatusBadge } from "../components/Review/ReviewScreen";
+import { errMsg, useCreateProjectMutation, useListProjectsQuery } from "../../../redux/features/review/reviewApi";
+import { StatusBadge } from "../../components/Review/ReviewScreen";
 
 export default function Projects() {
   const { data, isLoading, error } = useListProjectsQuery();

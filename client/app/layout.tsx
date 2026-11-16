@@ -5,17 +5,10 @@ import { Josefin_Sans, Poppins } from "next/font/google";
 import { ThemeProvider } from "./utils/theme-provider";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Providers } from "./Provider";
-import { useLoadUserQuery } from "./../redux/features/api/apiSlice";
 import { initializeApp } from "./../redux/store";
-import Loader from "./components/Loader/Loader";
-import AppShell from "./components/AppShell";
-import { usePathname } from "next/navigation";
 import { GeistSans } from "geist/font/sans";
-
-// Marketing and guest review pages are public: no app shell, no session probe.
-const MARKETING_ROUTES = ["/", "/login", "/signup", "/privacy", "/about", "/policy"];
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -31,8 +24,7 @@ const josefin = Josefin_Sans({
 
 
 export default function RootLayout({ children }: { children: React.ReactNode; }) {
-  const pathname = usePathname();
-  const isMarketing = MARKETING_ROUTES.includes(pathname || "") || (pathname || "").startsWith("/review/");
+  useEffect(() => { initializeApp(); }, []);
   return (
     <html lang="en">
       <body
@@ -41,13 +33,7 @@ export default function RootLayout({ children }: { children: React.ReactNode; })
         <div className="w-full h-full absolute top-0 bottom-0 bg-center bg-no-repeat bg-fixed bg-hero-light dark:bg-hero-dark duration-300 bg-cover z-[-1]"></div>
         <Providers>
             <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-              {isMarketing ? (
-                <>{children}</>
-              ) : (
-                <Custom>
-                  <AppShell>{children}</AppShell>
-                </Custom>
-              )}
+              {children}
               <ToastContainer
                 position="bottom-right"
                 autoClose={5000}
@@ -61,37 +47,3 @@ export default function RootLayout({ children }: { children: React.ReactNode; })
   );
 }
 
-
-const Custom: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isLoading } = useLoadUserQuery(undefined, {});
-
-  const [loadingPage, setLoadingPage] = useState(false);
-
-  useEffect(() => {
-    initializeApp();
-
-    const handleStart = (url: any) => {
-      if (url !== window.location.pathname) {
-        setLoadingPage(true);
-      }
-    };
-
-    const handleComplete = (url: any) => {
-      if (url !== window.location.pathname) {
-        setLoadingPage(false);
-      }
-    };
-
-    const handleRouteChange = (url: any) => {
-      handleStart(url);
-    };
-
-    window.addEventListener("popstate", handleRouteChange);
-
-    return () => {
-      window.removeEventListener("popstate", handleRouteChange);
-    };
-  }, []);
-
-  return <>{loadingPage && isLoading ? <Loader /> : <>{children}</>}</>;
-};
