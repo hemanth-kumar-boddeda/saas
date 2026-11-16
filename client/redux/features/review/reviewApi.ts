@@ -45,6 +45,10 @@ export const reviewApi = apiSlice.injectEndpoints({
       query: ({ id, lid }) => ({ url: `projects/${id}/links/${lid}`, method: "DELETE" }),
       invalidatesTags: ["Links"],
     }),
+    addEditor: b.mutation<any, { id: string; email: string }>({
+      query: ({ id, email }) => ({ url: `projects/${id}/editors`, method: "POST", body: { email } }),
+      invalidatesTags: ["Project"],
+    }),
     getKit: b.query<any, string>({ query: (id) => `projects/${id}/kit`, providesTags: ["Kit"] }),
     startKit: b.mutation<any, string>({
       query: (id) => ({ url: `projects/${id}/kit`, method: "POST" }),
@@ -84,7 +88,7 @@ export const {
   useListProjectsQuery, useCreateProjectMutation, useGetProjectQuery, useAddVersionMutation, useStreamUrlQuery,
   useListCommentsQuery, useAddCommentMutation, useSetCommentStatusMutation, useDecideMutation, useApprovalsQuery,
   useCreateLinkMutation, useListLinksQuery, useRevokeLinkMutation, useEnterLinkMutation,
-  useGetKitQuery, useStartKitMutation, useEditKitMutation, useListChannelsQuery, useCreateChannelMutation, useSetProjectChannelMutation,
+  useGetKitQuery, useAddEditorMutation, useStartKitMutation, useEditKitMutation, useListChannelsQuery, useCreateChannelMutation, useSetProjectChannelMutation,
   useListAccountsQuery, useConnectAccountMutation, useDisconnectAccountMutation, usePublishMutation, useListPublicationsQuery,
 } = reviewApi;
 

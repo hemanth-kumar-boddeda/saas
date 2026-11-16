@@ -5,7 +5,7 @@ import { toast } from "react-toastify";
 import Player, { PlayerHandle } from "./Player";
 import PublishKit from "./PublishKit";
 import {
-  errMsg, useAddCommentMutation, useAddVersionMutation, useApprovalsQuery, useCreateLinkMutation, useDecideMutation,
+  errMsg, useAddCommentMutation, useAddEditorMutation, useAddVersionMutation, useApprovalsQuery, useCreateLinkMutation, useDecideMutation,
   useGetProjectQuery, useListCommentsQuery, useListLinksQuery, useRevokeLinkMutation, useSetCommentStatusMutation,
   useStreamUrlQuery,
 } from "../../../redux/features/review/reviewApi";
@@ -164,6 +164,7 @@ export default function ReviewScreen({ projectId, guest }: { projectId: string; 
           <UploadVersion projectId={projectId} />
           {role === "owner" && version && isLatest && <ApprovalBox projectId={projectId} vid={vid} status={project.status} />}
           {role === "owner" && <ShareLinks projectId={projectId} />}
+          {role === "owner" && <InviteEditor projectId={projectId} count={project.editors?.length || 0} />}
           <ApprovalLog projectId={projectId} />
         </div>
       )}
@@ -381,5 +382,31 @@ function ApprovalLog({ projectId }: { projectId: string }) {
         </ul>
       )}
     </div>
+  );
+}
+
+function InviteEditor({ projectId, count }: { projectId: string; count: number }) {
+  const [email, setEmail] = useState("");
+  const [add, { isLoading }] = useAddEditorMutation();
+  return (
+    <form
+      className={card}
+      onSubmit={async (e) => {
+        e.preventDefault();
+        try {
+          await add({ id: projectId, email: email.trim() }).unwrap();
+          toast.success("Editor added");
+          setEmail("");
+        } catch (er) { toast.error(errMsg(er)); }
+      }}
+    >
+      <h2 className="font-medium mb-1">Editors</h2>
+      <p className="text-xs text-cf-muted mb-2">{count} editor{count === 1 ? "" : "s"}. Editors can upload versions and comment. They must have a CreatorFlow account.</p>
+      <div className="flex gap-2">
+        <label htmlFor="editor-email" className="sr-only">Editor email</label>
+        <input id="editor-email" type="email" required className={input} placeholder="editor@email.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+        <button className={btnPrimary} disabled={isLoading || !email.trim()}>Add editor</button>
+      </div>
+    </form>
   );
 }
