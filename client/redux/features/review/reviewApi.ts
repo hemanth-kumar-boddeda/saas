@@ -63,6 +63,17 @@ export const reviewApi = apiSlice.injectEndpoints({
       query: ({ id, channelId }) => ({ url: `projects/${id}/channel`, method: "PUT", body: { channelId } }),
       invalidatesTags: ["Project"],
     }),
+    listAccounts: b.query<any, void>({ query: () => "social/accounts", providesTags: ["Accounts"] }),
+    connectAccount: b.mutation<any, string>({ query: (provider) => ({ url: `social/${provider}/connect`, method: "POST" }) }),
+    disconnectAccount: b.mutation<any, string>({
+      query: (aid) => ({ url: `social/accounts/${aid}`, method: "DELETE" }),
+      invalidatesTags: ["Accounts"],
+    }),
+    publish: b.mutation<any, { id: string; body: Record<string, unknown> }>({
+      query: ({ id, body }) => ({ url: `projects/${id}/publish`, method: "POST", body }),
+      invalidatesTags: ["Publications", "Project", "Projects"],
+    }),
+    listPublications: b.query<any, string>({ query: (id) => `projects/${id}/publications`, providesTags: ["Publications"] }),
     enterLink: b.mutation<any, { token: string; name: string; password?: string }>({
       query: (body) => ({ url: "review-links/enter", method: "POST", body }),
     }),
@@ -74,6 +85,7 @@ export const {
   useListCommentsQuery, useAddCommentMutation, useSetCommentStatusMutation, useDecideMutation, useApprovalsQuery,
   useCreateLinkMutation, useListLinksQuery, useRevokeLinkMutation, useEnterLinkMutation,
   useGetKitQuery, useStartKitMutation, useEditKitMutation, useListChannelsQuery, useCreateChannelMutation, useSetProjectChannelMutation,
+  useListAccountsQuery, useConnectAccountMutation, useDisconnectAccountMutation, usePublishMutation, useListPublicationsQuery,
 } = reviewApi;
 
 export const errMsg = (e: any): string => e?.data?.message || "Something went wrong. Please try again.";

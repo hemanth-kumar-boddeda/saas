@@ -5,6 +5,7 @@ import {
   errMsg, useCreateChannelMutation, useEditKitMutation, useGetKitQuery, useListChannelsQuery,
   useSetProjectChannelMutation, useStartKitMutation,
 } from "../../../redux/features/review/reviewApi";
+import Publish from "./Publish";
 
 const card = "rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4";
 const btn = "px-3 py-1.5 rounded-md text-sm font-medium disabled:opacity-50";
@@ -160,6 +161,7 @@ export default function PublishKit({ projectId, role, channel }: { projectId: st
             <a className={ghost} href={absolute(`projects/${projectId}/kit/srt`)}>Download captions (.srt)</a>
             {owner && <button className={ghost} disabled={starting} onClick={go}>Regenerate (replaces edits)</button>}
           </div>
+          {owner && <Publish projectId={projectId} />}
         </div>
       )}
     </section>
