@@ -30,7 +30,7 @@ export const parse = <T extends z.ZodTypeAny>(schema: T, data: unknown): z.infer
 };
 const projectJson = (p: any, role: string) => ({
   _id: p._id, title: p.title, status: p.status, currentVersion: p.currentVersion, owner: p.owner,
-  editors: p.editors, createdAt: p.createdAt, role,
+  editors: p.editors, createdAt: p.createdAt, role, channel: p.channel,
 });
 const versionJson = (v: any) => ({
   _id: v._id, number: v.number, kind: v.kind, processing: v.processing, duration: v.duration,

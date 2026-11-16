@@ -15,7 +15,7 @@ export const apiSlice = createApi({
             return headers;
         },
     }),
-    tagTypes: ["Projects", "Project", "Comments", "Approvals", "Links"],
+    tagTypes: ["Projects", "Project", "Comments", "Approvals", "Links", "Kit", "Channels"],
     endpoints: (builder) => ({
         refreshToken: builder.query({
             query: (data) => ({

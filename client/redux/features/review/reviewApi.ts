@@ -45,6 +45,24 @@ export const reviewApi = apiSlice.injectEndpoints({
       query: ({ id, lid }) => ({ url: `projects/${id}/links/${lid}`, method: "DELETE" }),
       invalidatesTags: ["Links"],
     }),
+    getKit: b.query<any, string>({ query: (id) => `projects/${id}/kit`, providesTags: ["Kit"] }),
+    startKit: b.mutation<any, string>({
+      query: (id) => ({ url: `projects/${id}/kit`, method: "POST" }),
+      invalidatesTags: ["Kit"],
+    }),
+    editKit: b.mutation<any, { id: string; edit: Record<string, unknown> }>({
+      query: ({ id, edit }) => ({ url: `projects/${id}/kit`, method: "PATCH", body: edit }),
+      invalidatesTags: ["Kit"],
+    }),
+    listChannels: b.query<any, void>({ query: () => "channels", providesTags: ["Channels"] }),
+    createChannel: b.mutation<any, Record<string, unknown>>({
+      query: (body) => ({ url: "channels", method: "POST", body }),
+      invalidatesTags: ["Channels"],
+    }),
+    setProjectChannel: b.mutation<any, { id: string; channelId: string | null }>({
+      query: ({ id, channelId }) => ({ url: `projects/${id}/channel`, method: "PUT", body: { channelId } }),
+      invalidatesTags: ["Project"],
+    }),
     enterLink: b.mutation<any, { token: string; name: string; password?: string }>({
       query: (body) => ({ url: "review-links/enter", method: "POST", body }),
     }),
@@ -55,6 +73,7 @@ export const {
   useListProjectsQuery, useCreateProjectMutation, useGetProjectQuery, useAddVersionMutation, useStreamUrlQuery,
   useListCommentsQuery, useAddCommentMutation, useSetCommentStatusMutation, useDecideMutation, useApprovalsQuery,
   useCreateLinkMutation, useListLinksQuery, useRevokeLinkMutation, useEnterLinkMutation,
+  useGetKitQuery, useStartKitMutation, useEditKitMutation, useListChannelsQuery, useCreateChannelMutation, useSetProjectChannelMutation,
 } = reviewApi;
 
 export const errMsg = (e: any): string => e?.data?.message || "Something went wrong. Please try again.";

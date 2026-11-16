@@ -19,7 +19,7 @@ export default function LoginPage() {
             setRoute={(route) =>
               router.push(route === "Sign-Up" ? "/signup" : "/login")
             }
-            setOpen={() => router.push("/videos")}
+            setOpen={() => router.push("/projects")}
           />
         </div>
         <p className="body-2 mt-6 text-center text-cf-muted">

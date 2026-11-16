@@ -3,6 +3,7 @@ import React, { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { toast } from "react-toastify";
 import Player, { PlayerHandle } from "./Player";
+import PublishKit from "./PublishKit";
 import {
   errMsg, useAddCommentMutation, useAddVersionMutation, useApprovalsQuery, useCreateLinkMutation, useDecideMutation,
   useGetProjectQuery, useListCommentsQuery, useListLinksQuery, useRevokeLinkMutation, useSetCommentStatusMutation,
@@ -159,6 +160,9 @@ export default function ReviewScreen({ projectId, guest }: { projectId: string; 
           {role === "owner" && <ShareLinks projectId={projectId} />}
           <ApprovalLog projectId={projectId} />
         </div>
+      )}
+      {!guest && (project.status === "approved" || project.status === "published") && (
+        <PublishKit projectId={projectId} role={role} channel={project.channel} />
       )}
     </div>
   );
