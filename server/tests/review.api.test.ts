@@ -94,6 +94,7 @@ describe("comments", () => {
   it("resolve/filter by status; comments stay with their version", async () => {
     const c = await post("owner", { body: "a", timecode: 1 });
     await post("owner", { body: "b", timecode: 2 });
+    m.ReviewComment.rows.forEach((r: any) => (r.draft = false)); // owner notes are drafts until sent; this test is about resolve/filter
     const res = await request(app).patch(`/v1/projects/${pid}/comments/${c.body.comment._id}/status`).set(as("editor")).send({ status: "resolved" });
     expect(res.status).toBe(200);
     const open = await request(app).get(`/v1/projects/${pid}/versions/${vid}/comments?status=open`).set(as("owner"));

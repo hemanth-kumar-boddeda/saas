@@ -56,6 +56,7 @@ const commentSchema = new Schema(
     timecode: { type: Number, required: true, min: 0 },
     // Text is optional when the comment is a voice note.
     body: { type: String, required: function (this: any) { return !this.audioKey; }, maxlength: 2000, default: "" },
+    annotation: Schema.Types.Mixed, // { strokes: [{ tool, color, points }] } validated by zod before saving
     audioKey: String, // private path under STORAGE_DIR, never sent to clients
     audioDuration: Number,
     status: { type: String, enum: ["open", "resolved"], default: "open" },
@@ -64,6 +65,7 @@ const commentSchema = new Schema(
     guestName: { type: String, maxlength: 60 },
     authorKey: { type: String, required: true },
     resolvedBy: { type: Schema.Types.ObjectId, ref: "User" },
+    resolvedByName: String,
     // Owner notes stay private drafts until "Send feedback".
     draft: { type: Boolean, default: false },
   },

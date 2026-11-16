@@ -64,7 +64,7 @@ r.get("/projects/:id/versions/:vid/comments", any, c.listComments);
 r.post("/projects/:id/versions/:vid/comments", any, c.addComment);
 r.post("/projects/:id/versions/:vid/voice-comments", any, voiceMw, c.addVoiceComment);
 r.get("/voice/:cid", c.serveVoice);
-r.patch("/projects/:id/comments/:cid/status", member, c.setCommentStatus);
+r.patch("/projects/:id/comments/:cid/status", any, c.setCommentStatus); // invited editors (magic link) tick changes done; permission checked in the controller
 
 r.put("/projects/:id/brief", member, c.setBrief);
 r.post("/projects/:id/references", member, uploadMw, c.addReference);

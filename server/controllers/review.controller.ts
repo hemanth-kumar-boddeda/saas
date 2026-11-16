@@ -10,7 +10,7 @@ import userModel from "../models/user.model";
 import { emailQuery } from "../utils/email";
 import { Project, ProjectVersion, ReviewComment, ReviewLink, Approval } from "../models/review.model";
 import {
-  assertCan, commentInput, decideApproval, filterComments, nextVersionNumber, statusAfterNewVersion,
+  annotationSchema, assertCan, commentInput, decideApproval, filterComments, nextVersionNumber, statusAfterNewVersion,
   validateNewComment, ApprovalAction,
 } from "../services/reviewLogic";
 import { hashToken, newLinkToken, signGuestToken, signStreamToken, verifyStreamToken } from "../utils/reviewTokens";
@@ -160,7 +160,7 @@ export const serveStream = CatchAsyncError(async (req: Request, res: Response) =
 // ---- comments ----
 const commentJson = (c: any) => ({
   _id: c._id, version: c.version, parentId: c.parentId, timecode: c.timecode, body: c.body, status: c.status,
-  authorName: c.guestName || c.authorName || "User", authorKey: c.authorKey, createdAt: c.createdAt, draft: !!c.draft,
+  authorName: c.guestName || c.authorName || "User", authorKey: c.authorKey, createdAt: c.createdAt, draft: !!c.draft, annotation: c.annotation || undefined, resolvedByName: c.resolvedByName,
   audioUrl: c.audioKey ? `/v1/voice/${c._id}?t=${signStreamToken(String(c._id))}` : undefined, audioDuration: c.audioDuration,
 });
 
@@ -196,7 +196,7 @@ export const addComment = CatchAsyncError(async (req: Request, res: Response) =>
     // A reply sits at its parent's time so the thread stays on one marker.
     timecode: parent ? parent.timecode : input.timecode, body: input.body, author: a.userId,
     guestName: a.userId ? undefined : a.name, authorKey: a.key,
-    draft: a.role === "owner",
+    draft: a.role === "owner", annotation: input.annotation,
   });
   if (!c.draft) void notifyProject({
     project: a.project, exceptUserId: a.userId, subject: `New comment on ${a.project.title}`,
@@ -210,11 +210,22 @@ export const setCommentStatus = CatchAsyncError(async (req: Request, res: Respon
   assertCan(a.role, "resolve");
   const { status } = parse(z.object({ status: z.enum(["open", "resolved"]) }), req.body);
   const c: any = mongoose.isValidObjectId(req.params.cid) ? await ReviewComment.findOne({ _id: req.params.cid, project: a.project._id }) : null;
-  if (!c) throw new ErrorHandler(404, "Comment not found");
+  if (!c || (c.draft && c.authorKey !== a.key)) throw new ErrorHandler(404, "Comment not found");
   if (c.parentId) throw new ErrorHandler(422, "Resolve the thread, not a reply");
   c.status = status;
   c.resolvedBy = status === "resolved" ? a.userId : undefined;
+  c.resolvedByName = status === "resolved" ? a.name : undefined;
   await c.save();
+  // Editor ticked the last open change: tell the owner it is ready to review again.
+  if (status === "resolved" && a.role === "editor") {
+    const roots: any[] = await ReviewComment.find({ version: c.version, parentId: null, draft: false });
+    if (roots.length && roots.every((r) => r.status === "resolved")) {
+      void notifyProject({
+        project: a.project, exceptUserId: a.userId, subject: `All changes done: ${a.project.title}`,
+        heading: "Editor marked every change as done", body: `${a.name} ticked all ${roots.length} requested change${roots.length === 1 ? "" : "s"}. Open the review to check the new cut.`,
+      });
+    }
+  }
   res.json({ success: true });
 });
 
@@ -430,6 +441,10 @@ export const addVoiceComment = CatchAsyncError(async (req: Request, res: Respons
     if (!file) throw new ErrorHandler(422, "Record or upload a voice note");
     const v = await getVersion(String(a.project._id), req.params.vid);
     const input = parse(z.object({ timecode: z.coerce.number().finite().min(0), parentId: z.string().optional(), body: z.string().trim().max(2000).optional() }), req.body);
+    let annotation: any;
+    if (req.body.annotation) {
+      try { annotation = parse(annotationSchema, JSON.parse(String(req.body.annotation))); } catch (e) { throw e instanceof ErrorHandler ? e : new ErrorHandler(422, "Invalid drawing"); }
+    }
     const parent: any = input.parentId && mongoose.isValidObjectId(input.parentId) ? await ReviewComment.findById(input.parentId) : null;
     validateNewComment({ body: input.body || "voice", timecode: input.timecode, parentId: input.parentId }, { _id: String(v._id), duration: v.duration },
       parent && { _id: String(parent._id), versionId: String(parent.version), parentId: parent.parentId && String(parent.parentId), timecode: parent.timecode, status: parent.status, authorKey: parent.authorKey });
@@ -447,7 +462,7 @@ export const addVoiceComment = CatchAsyncError(async (req: Request, res: Respons
       c = await ReviewComment.create({
         _id, project: a.project._id, version: v._id, parentId: parent?._id ?? null,
         timecode: parent ? parent.timecode : input.timecode, body: input.body || "", author: a.userId,
-        guestName: a.userId ? undefined : a.name, authorKey: a.key, draft: a.role === "owner", audioDuration: duration,
+        guestName: a.userId ? undefined : a.name, authorKey: a.key, draft: a.role === "owner", audioDuration: duration, annotation,
         audioKey: path.relative(storageRoot(), out),
       });
     } catch (e) {

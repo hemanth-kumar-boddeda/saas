@@ -57,10 +57,26 @@ export const statusAfterPublish = (current: ProjectStatus): ProjectStatus => {
 export const nextVersionNumber = (existing: number[]): number =>
   existing.length ? Math.max(...existing) + 1 : 1;
 
+/** Marks drawn on the frame, in 0-1 coordinates so they fit any player size. */
+export const annotationSchema = z.object({
+  strokes: z
+    .array(
+      z.object({
+        tool: z.enum(["pen", "arrow"]),
+        color: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+        points: z.array(z.tuple([z.number().min(0).max(1), z.number().min(0).max(1)])).min(2).max(400),
+      })
+    )
+    .min(1)
+    .max(40),
+});
+export type Annotation = z.infer<typeof annotationSchema>;
+
 export const commentInput = z.object({
   body: z.string().trim().min(1).max(2000),
   timecode: z.number().finite().min(0),
   parentId: z.string().optional(),
+  annotation: annotationSchema.optional(),
 });
 export type CommentInput = z.infer<typeof commentInput>;
 

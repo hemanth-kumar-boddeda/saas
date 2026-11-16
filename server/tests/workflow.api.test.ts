@@ -17,6 +17,8 @@ vi.mock("../models/review.model", () => m);
 vi.mock("../models/user.model", () => ({ default: { findOne: vi.fn(), find: vi.fn().mockResolvedValue([]) } }));
 const mail = vi.hoisted(() => ({ mailLink: vi.fn().mockResolvedValue(true), notifyProject: vi.fn() }));
 vi.mock("../utils/notify", () => ({ ...mail, reviewLinkUrl: (t: string) => `http://app/review/${t}` }));
+// The per-IP limiter (10/min) would throttle this many link entries in one test run.
+vi.mock("../middleware/rateLimit", () => ({ authIpLimiter: (_q: any, _r: any, next: any) => next() }));
 vi.mock("../jobs/autoKit", () => ({ autoStartKit: vi.fn() }));
 vi.mock("../controllers/user.controller", () => ({ generateAccessToken: (_q: any, _r: any, next: any) => next() }));
 vi.mock("../middleware/auth", async () => {
@@ -170,5 +172,64 @@ describe("owner drafts and send feedback", () => {
     expect(r.status).toBe(201);
     expect(r.body.comment.draft).toBe(false);
     expect((await list(as("owner"))).body.comments).toHaveLength(1);
+  });
+});
+
+describe("change checklist (editor marks done)", () => {
+  const owner = (body: any) => request(app).post(`/v1/projects/${pid}/versions/${vid}/comments`).set(as("owner")).send(body);
+  const status = (hdr: Record<string, string>, cid: string, s = "resolved") => request(app).patch(`/v1/projects/${pid}/comments/${cid}/status`).set(hdr).send({ status: s });
+  const sentFeedback = async () => {
+    const inv = await invite();
+    const hdr = { "x-guest-token": (await enter(tokenOf(inv.body.link))).body.guestToken };
+    const a = (await owner({ body: "one", timecode: 1 })).body.comment._id;
+    const b = (await owner({ body: "two", timecode: 2 })).body.comment._id;
+    await request(app).post(`/v1/projects/${pid}/versions/${vid}/send-feedback`).set(as("owner"));
+    return { hdr, a, b };
+  };
+
+  it("magic-link editor can mark sent changes done; owner is told only when the last one is ticked", async () => {
+    const { hdr, a, b } = await sentFeedback();
+    mail.notifyProject.mockClear();
+    expect((await status(hdr, a)).status).toBe(200);
+    expect(mail.notifyProject).not.toHaveBeenCalled();
+    expect((await status(hdr, b)).status).toBe(200);
+    expect(mail.notifyProject).toHaveBeenCalledWith(expect.objectContaining({ heading: expect.stringMatching(/every change/) }));
+    expect(m.ReviewComment.rows.find((c: any) => String(c._id) === a).resolvedByName).toBeTruthy();
+  });
+  it("owner can reopen a change the editor ticked", async () => {
+    const { hdr, a } = await sentFeedback();
+    await status(hdr, a);
+    expect((await status(as("owner"), a, "open")).status).toBe(200);
+    expect(m.ReviewComment.rows.find((c: any) => String(c._id) === a).status).toBe("open");
+  });
+  it("editor cannot touch owner drafts that were not sent", async () => {
+    const inv = await invite();
+    const hdr = { "x-guest-token": (await enter(tokenOf(inv.body.link))).body.guestToken };
+    const draft = (await owner({ body: "private", timecode: 3 })).body.comment._id;
+    expect((await status(hdr, draft)).status).toBe(404);
+  });
+  it("plain guests cannot resolve; strangers get 404", async () => {
+    await m.ReviewLink.create({ project: pid, tokenHash: (await import("../utils/reviewTokens")).hashToken("plain-guest-token-1"), role: "guest" });
+    const g = (await enter("plain-guest-token-1", { name: "G" })).body.guestToken;
+    const c = (await owner({ body: "x", timecode: 1 })).body.comment._id;
+    expect((await status({ "x-guest-token": g }, c)).status).toBe(403);
+    expect((await status(as("stranger"), c)).status).toBe(404);
+  });
+});
+
+describe("drawings on the frame", () => {
+  const post = (body: any) => request(app).post(`/v1/projects/${pid}/versions/${vid}/comments`).set(as("owner")).send(body);
+  const stroke = { tool: "arrow", color: "#ff0000", points: [[0.1, 0.2], [0.5, 0.6]] };
+  it("saves and returns a valid annotation", async () => {
+    const r = await post({ body: "move logo here", timecode: 4, annotation: { strokes: [stroke] } });
+    expect(r.status).toBe(201);
+    expect(r.body.comment.annotation.strokes[0]).toMatchObject({ tool: "arrow", color: "#ff0000" });
+  });
+  it("rejects out-of-range points, bad colors, unknown tools and oversized drawings", async () => {
+    expect((await post({ body: "x", timecode: 1, annotation: { strokes: [{ ...stroke, points: [[2, 0], [0, 0]] }] } })).status).toBe(422);
+    expect((await post({ body: "x", timecode: 1, annotation: { strokes: [{ ...stroke, color: "red" }] } })).status).toBe(422);
+    expect((await post({ body: "x", timecode: 1, annotation: { strokes: [{ ...stroke, tool: "script" }] } })).status).toBe(422);
+    expect((await post({ body: "x", timecode: 1, annotation: { strokes: Array(41).fill(stroke) } })).status).toBe(422);
+    expect((await post({ body: "x", timecode: 1, annotation: { strokes: [] } })).status).toBe(422);
   });
 });
