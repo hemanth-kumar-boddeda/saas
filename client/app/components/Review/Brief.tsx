@@ -1,5 +1,5 @@
 "use client";
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import {
   errMsg, useAddReferenceMutation, useDeleteReferenceMutation, useReferenceStreamQuery, useSetBriefMutation,
@@ -32,6 +32,9 @@ export default function Brief({ projectId, role, brief, references }: { projectI
   const [title, setTitle] = useState("");
   const file = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState<string | null>(null);
+  // On phones the brief starts collapsed so the video is the first thing on screen.
+  const [expanded, setExpanded] = useState(true);
+  useEffect(() => { if (window.innerWidth < 1024) setExpanded(false); }, []);
 
   const save = async () => {
     try { await setBrief({ id: projectId, brief: text }).unwrap(); setDirty(false); toast.success("Notes saved"); } catch (e) { toast.error(errMsg(e)); }
@@ -48,7 +51,14 @@ export default function Brief({ projectId, role, brief, references }: { projectI
 
   return (
     <section className={`${card} mb-6`} aria-label="Brief and references">
-      <h2 className="text-lg font-semibold">Brief for the editor</h2>
+      <button type="button" className="flex w-full items-center justify-between gap-3 text-left" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
+        <span className="min-w-0 flex-1">
+          <span className="block text-lg font-semibold">Brief for the editor</span>
+          {!expanded && <span className="block truncate text-xs text-cf-muted">{brief ? brief.slice(0, 90) : "No notes yet"} · {references.length} reference{references.length === 1 ? "" : "s"}</span>}
+        </span>
+        <span aria-hidden="true" className="cf-badge shrink-0 border-cf-line text-cf-muted">{expanded ? "Hide" : "Show"}</span>
+      </button>
+      {expanded && <div>
       {owner ? (
         <>
           <p className="mt-1 text-xs text-cf-muted">Describe what you want: style, pacing, music, things to fix. The editor sees this first. Add exact moments as comments on the video.</p>
@@ -84,6 +94,7 @@ export default function Brief({ projectId, role, brief, references }: { projectI
           <input ref={file} type="file" accept="video/*" aria-label="Or upload a reference video" className="text-xs text-cf-muted sm:col-span-3" />
         </form>
       )}
+      </div>}
     </section>
   );
 }

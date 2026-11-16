@@ -1,5 +1,5 @@
 "use client";
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { toast } from "react-toastify";
 import Player, { PlayerHandle } from "./Player";
@@ -65,6 +65,14 @@ export default function ReviewScreen({ projectId, guest }: { projectId: string; 
   const player = useRef<PlayerHandle>(null);
   const [now, setNow] = useState(0);
   const [drawing, setDrawing] = useState(false);
+  const [composerVisible, setComposerVisible] = useState(false);
+  useEffect(() => {
+    const el = document.getElementById("comment-box");
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(([e]) => setComposerVisible(e.isIntersecting), { threshold: 0.6 });
+    io.observe(el);
+    return () => io.disconnect();
+  });
   const [attached, setAttached] = useState<Stroke[]>([]);
   const [shownAnn, setShownAnn] = useState<{ t: number; strokes: Stroke[] } | null>(null);
 
@@ -94,7 +102,7 @@ export default function ReviewScreen({ projectId, guest }: { projectId: string; 
   const duration: number = version?.duration || ytDuration || 0;
 
   return (
-    <div className="cf-rise mx-auto max-w-7xl p-4 sm:p-6 text-cf-text">
+    <div className="mx-auto max-w-7xl p-4 pb-24 sm:p-6 text-cf-text">
       <header className="mb-5">
         <div className="flex flex-wrap items-center gap-3">
           {!guest && <Link href="/projects" className="cf-chip hover:text-cf-text">← Projects</Link>}
@@ -208,6 +216,15 @@ export default function ReviewScreen({ projectId, guest }: { projectId: string; 
           {!guest && <ApprovalLog projectId={projectId} />}
         </div>
       )}
+      {version && !drawing && !composerVisible && (
+        <button
+          type="button"
+          className="cf-btn cf-btn-primary fixed bottom-4 left-1/2 z-30 -translate-x-1/2 px-5 py-3 text-sm shadow-2xl shadow-black/60 lg:hidden"
+          onClick={() => { player.current?.pause(); const t = document.getElementById("comment-box"); t?.scrollIntoView({ block: "center", behavior: "smooth" }); setTimeout(() => t?.focus(), 350); }}
+        >
+          {version.kind === "link" && !ytId ? "Add comment" : `Comment at ${fmt(now)}`}
+        </button>
+      )}
       {!guest && (project.status === "approved" || project.status === "published") && (
         <PublishKit projectId={projectId} role={role} channel={project.channel} />
       )}
@@ -307,7 +324,7 @@ function NewComment({ projectId, vid, now, manual, duration, onFocus, attached, 
           {attached?.length > 0 && <button type="button" className="text-xs underline text-cf-muted" onClick={onClearDrawing}>Remove drawing ({attached.length})</button>}
         </div>
       )}
-      <textarea className={input} rows={2} maxLength={2000} value={body} onChange={(e) => setBody(e.target.value)} placeholder="Pause the video, then write your note for this exact moment" onFocus={onFocus} />
+      <textarea id="comment-box" className={input} rows={2} maxLength={2000} value={body} onChange={(e) => setBody(e.target.value)} placeholder="Pause the video, then write your note for this exact moment" onFocus={onFocus} />
       <button className={`${btnPrimary} w-full`} disabled={isLoading || !body.trim()}>{manual ? "Add comment" : `Comment at ${fmt(now)}`}</button>
       <VoiceRecorder onStart={onFocus} onSend={sendVoice} sending={sendingVoice} label={manual ? "Record voice note" : `Record voice note at ${fmt(now)}`} />
     </form>
@@ -512,7 +529,7 @@ function Stepper({ status }: { status: string }) {
       {STEPS.map((label, i) => (
         <li key={label} className="flex items-center gap-2" aria-current={i === at ? "step" : undefined}>
           <span className={`cf-badge ${i < at ? "border-green-500/30 bg-green-500/10 text-green-300" : i === at ? "border-cf-violet/50 bg-cf-violet/15 text-violet-200" : "border-cf-line text-cf-muted"}`}>{i + 1}. {label}</span>
-          {i < STEPS.length - 1 && <span aria-hidden="true" className="h-px w-5 bg-cf-line" />}
+          {i < STEPS.length - 1 && <span aria-hidden="true" className="hidden h-px w-5 bg-cf-line sm:block" />}
         </li>
       ))}
     </ol>
