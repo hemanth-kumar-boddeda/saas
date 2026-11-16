@@ -6,6 +6,7 @@ import Player, { PlayerHandle } from "./Player";
 import PublishKit from "./PublishKit";
 import YouTubePlayer, { youtubeId } from "./YouTubePlayer";
 import Brief from "./Brief";
+import { AnnotationView, DrawLayer, Stroke } from "./Annotation";
 import VoiceRecorder, { VoicePlayer } from "./VoiceNote";
 import { InstagramEmbed, instagramId } from "./Embed";
 import {
@@ -63,6 +64,9 @@ export default function ReviewScreen({ projectId, guest }: { projectId: string; 
   const [mine, setMine] = useState(false);
   const player = useRef<PlayerHandle>(null);
   const [now, setNow] = useState(0);
+  const [drawing, setDrawing] = useState(false);
+  const [attached, setAttached] = useState<Stroke[]>([]);
+  const [shownAnn, setShownAnn] = useState<{ t: number; strokes: Stroke[] } | null>(null);
 
   const { data: cdata, isFetching: loadingComments } = useListCommentsQuery(
     { id: projectId, vid: vid!, status: status || undefined, mine },
@@ -124,9 +128,13 @@ export default function ReviewScreen({ projectId, guest }: { projectId: string; 
               </div>
             )}
             {stream.isFetching && <div className={card}>Loading player…</div>}
+            <div className="relative">
             {stream.data?.kind === "hls" && <Player ref={player} src={stream.data.url} onTime={setNow} />}
             {ig && <InstagramEmbed url={version.externalUrl} />}
             {ytId && <YouTubePlayer ref={player} videoId={ytId} onTime={setNow} onDuration={setYtDuration} />}
+            {drawing && <DrawLayer initial={attached} onCancel={() => setDrawing(false)} onDone={(st) => { setAttached(st); setDrawing(false); }} />}
+            {!drawing && shownAnn && Math.abs(now - shownAnn.t) < 2 && <AnnotationView strokes={shownAnn.strokes} />}
+            </div>
             {stream.isError && <p className="text-red-300 text-sm">{errMsg(stream.error)}</p>}
 
             {duration > 0 && (
@@ -162,21 +170,30 @@ export default function ReviewScreen({ projectId, guest }: { projectId: string; 
               <select aria-label="Filter" className={`${input} !w-auto`} value={status} onChange={(e) => setStatus(e.target.value)}>
                 <option value="">All</option>
                 <option value="open">Open</option>
-                <option value="resolved">Resolved</option>
+                <option value="resolved">Done</option>
               </select>
               <label className="text-sm flex items-center gap-1">
                 <input type="checkbox" checked={mine} onChange={(e) => setMine(e.target.checked)} /> Mine
               </label>
             </div>
+            {roots.filter((c) => !c.draft).length > 0 && (() => {
+              const sent = roots.filter((c) => !c.draft); const done = sent.filter((c) => c.status === "resolved").length;
+              return (
+                <div className="mb-3" aria-label={`${done} of ${sent.length} changes done`}>
+                  <div className="mb-1 flex justify-between text-xs text-cf-muted"><span>Change checklist</span><span>{done} of {sent.length} done</span></div>
+                  <div className="h-1.5 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-green-400 transition-all duration-500" style={{ width: `${(done / sent.length) * 100}%` }} /></div>
+                </div>
+              );
+            })()}
             {role === "owner" && <SendFeedback projectId={projectId} vid={vid} drafts={comments.filter((c) => c.draft).length} />}
             <div className="overflow-y-auto flex-1 space-y-3">
               {loadingComments && <p className="text-sm text-cf-muted">Loading comments…</p>}
               {!loadingComments && roots.length === 0 && <p className="text-sm text-cf-muted">No comments yet. Pause the video and add the first one.</p>}
               {roots.map((c) => (
-                <Thread key={c._id} c={c} replies={comments.filter((r) => r.parentId === c._id)} projectId={projectId} vid={vid} role={role} seek={(t: number) => player.current?.seek(t)} />
+                <Thread key={c._id} c={c} replies={comments.filter((r) => r.parentId === c._id)} projectId={projectId} vid={vid} role={role} seek={(t: number, ann?: Stroke[]) => { player.current?.seek(t); player.current?.pause(); setShownAnn(ann?.length ? { t, strokes: ann } : null); }} />
               ))}
             </div>
-            <NewComment projectId={projectId} vid={vid} now={now} manual={version.kind === "link" && !ytId} onFocus={() => player.current?.pause()} duration={duration} />
+            <NewComment projectId={projectId} vid={vid} now={now} manual={version.kind === "link" && !ytId} onFocus={() => player.current?.pause()} duration={duration} attached={attached} onClearDrawing={() => setAttached([])} onDraw={() => { player.current?.pause(); setDrawing(true); }} />
           </aside>
         </div>
       )}
@@ -209,9 +226,9 @@ function Thread({ c, replies, projectId, vid, role, seek }: any) {
       <div className="flex items-center gap-2 text-xs text-cf-muted">
         <span aria-hidden="true" className="flex h-6 w-6 items-center justify-center rounded-full bg-cf-violet/30 text-[11px] font-semibold text-violet-100">{String(c.authorName || "?").slice(0, 1).toUpperCase()}</span>
         <span className="text-cf-text">{c.authorName}</span>
-        <button className="cf-badge border-cf-violet/40 bg-cf-violet/10 font-mono text-violet-200 hover:bg-cf-violet/20" onClick={() => seek(c.timecode)}>{fmt(c.timecode)}</button>
+        <button className="cf-badge border-cf-violet/40 bg-cf-violet/10 font-mono text-violet-200 hover:bg-cf-violet/20" onClick={() => seek(c.timecode, c.annotation?.strokes)}>{fmt(c.timecode)}{c.annotation ? " ✏" : ""}</button>
         {c.draft && <span className="cf-badge border-amber-500/30 bg-amber-500/10 text-amber-300">Draft, not sent</span>}
-        {c.status === "resolved" && <span className="text-green-300">resolved</span>}
+        {c.status === "resolved" && <span className="text-green-300">✓ done{c.resolvedByName ? ` by ${c.resolvedByName}` : ""}</span>}
       </div>
       {c.body && <p className="text-sm whitespace-pre-wrap break-words">{c.body}</p>}
       {c.audioUrl && <VoicePlayer url={c.audioUrl} seconds={c.audioDuration} />}
@@ -225,7 +242,7 @@ function Thread({ c, replies, projectId, vid, role, seek }: any) {
         <button className="underline" onClick={() => setOpen(!open)}>Reply</button>
         {canResolve && (
           <button className="underline" onClick={() => setStatus({ id: projectId, cid: c._id, status: c.status === "open" ? "resolved" : "open" }).unwrap().catch((e) => toast.error(errMsg(e)))}>
-            {c.status === "open" ? "Resolve" : "Reopen"}
+            {c.status === "open" ? (role === "editor" ? "Mark done" : "Resolve") : "Reopen"}
           </button>
         )}
       </div>
@@ -248,7 +265,7 @@ function Thread({ c, replies, projectId, vid, role, seek }: any) {
   );
 }
 
-function NewComment({ projectId, vid, now, manual, duration, onFocus }: any) {
+function NewComment({ projectId, vid, now, manual, duration, onFocus, attached, onClearDrawing, onDraw }: any) {
   const [body, setBody] = useState("");
   const [time, setTime] = useState("0:00");
   const [add, { isLoading }] = useAddCommentMutation();
@@ -260,7 +277,8 @@ function NewComment({ projectId, vid, now, manual, duration, onFocus }: any) {
     form.append("audio", blob, "voice-note");
     form.append("timecode", String(t));
     if (body.trim()) form.append("body", body.trim());
-    try { await addVoice({ id: projectId, vid, form }).unwrap(); setBody(""); toast.success("Voice note added"); } catch (er) { toast.error(errMsg(er)); }
+    if (attached?.length) form.append("annotation", JSON.stringify({ strokes: attached }));
+    try { await addVoice({ id: projectId, vid, form }).unwrap(); setBody(""); onClearDrawing?.(); toast.success("Voice note added"); } catch (er) { toast.error(errMsg(er)); }
   };
   return (
     <form
@@ -270,8 +288,8 @@ function NewComment({ projectId, vid, now, manual, duration, onFocus }: any) {
         const t = manual ? parseTime(time) : now;
         if (Number.isNaN(t)) return toast.error("Enter time as m:ss");
         try {
-          await add({ id: projectId, vid, body, timecode: t }).unwrap();
-          setBody("");
+          await add({ id: projectId, vid, body, timecode: t, ...(attached?.length ? { annotation: { strokes: attached } } : {}) }).unwrap();
+          setBody(""); onClearDrawing?.();
         } catch (er) { toast.error(errMsg(er)); }
       }}
     >
@@ -283,6 +301,12 @@ function NewComment({ projectId, vid, now, manual, duration, onFocus }: any) {
         )}
         {duration > 0 && <span className="text-cf-muted">of {fmt(duration)}</span>}
       </div>
+      {!manual && (
+        <div className="flex items-center gap-2">
+          <button type="button" className="cf-btn cf-btn-secondary text-xs" onClick={onDraw}>✏ {attached?.length ? "Edit drawing" : "Draw on this frame"}</button>
+          {attached?.length > 0 && <button type="button" className="text-xs underline text-cf-muted" onClick={onClearDrawing}>Remove drawing ({attached.length})</button>}
+        </div>
+      )}
       <textarea className={input} rows={2} maxLength={2000} value={body} onChange={(e) => setBody(e.target.value)} placeholder="Pause the video, then write your note for this exact moment" onFocus={onFocus} />
       <button className={`${btnPrimary} w-full`} disabled={isLoading || !body.trim()}>{manual ? "Add comment" : `Comment at ${fmt(now)}`}</button>
       <VoiceRecorder onStart={onFocus} onSend={sendVoice} sending={sendingVoice} label={manual ? "Record voice note" : `Record voice note at ${fmt(now)}`} />
