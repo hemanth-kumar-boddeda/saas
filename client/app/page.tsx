@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import MarketingNavbar from "./components/landing/MarketingNavbar";
 import HeroSection from "./components/landing/HeroSection";
 import ProductShowcase from "./components/landing/ProductShowcase";
+import OrbitSection from "./components/landing/OrbitSection";
 import TaglineReveal from "./components/landing/TaglineReveal";
 import ProblemSolutionSection from "./components/landing/ProblemSolutionSection";
 import BenefitsSection from "./components/landing/BenefitsSection";
@@ -64,6 +65,7 @@ export default function Page() {
         <main id="main">
           <HeroSection />
           <ProductShowcase />
+          <OrbitSection />
           <TaglineReveal />
           <ProblemSolutionSection />
           <BenefitsSection />
