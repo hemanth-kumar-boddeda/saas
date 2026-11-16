@@ -3,9 +3,11 @@ import React from "react";
 import { ArrowRight } from "@phosphor-icons/react/dist/ssr/ArrowRight";
 import ProductPreview from "./ProductPreview";
 import BlurText from "../reactbits/BlurText";
+import HeroBackground from "./HeroBackground";
 
 const HeroSection: React.FC = () => (
-  <section className="relative overflow-hidden pb-16 pt-32 md:pb-24 md:pt-40">
+  <section className="relative isolate overflow-hidden pb-16 pt-32 md:pb-24 md:pt-40">
+    <HeroBackground />
     <div className="mx-auto max-w-6xl px-4 md:px-8">
       <div className="cf-measure">
         <span className="cf-chip">For YouTube and Instagram creators and their editors</span>
