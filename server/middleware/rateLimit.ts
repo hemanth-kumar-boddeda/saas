@@ -75,3 +75,13 @@ export const aiLimiter: RateLimitRequestHandler = rateLimit({
   handler: limitHandler,
   keyGenerator: (req: Request) => `ai:${String(req.user?._id ?? "anon")}`,
 });
+
+// Publishing hits external APIs and quotas: 10/hour per signed-in user.
+export const publishLimiter: RateLimitRequestHandler = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 10,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  handler: limitHandler,
+  keyGenerator: (req: Request) => `pub:${String(req.user?._id ?? "anon")}`,
+});

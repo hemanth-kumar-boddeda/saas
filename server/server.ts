@@ -9,6 +9,8 @@ import authRouter from "./routes/auth.route";
 import reviewRouter from "./routes/review.route";
 import publishKitRouter from "./routes/publishkit.route";
 import { startKitWorker } from "./jobs/publishKit";
+import socialRouter from "./routes/social.route";
+import { startPublishWorker } from "./jobs/publish";
 import http from "http";
 import { allowedOrigins } from "./config/env";
 
@@ -61,6 +63,7 @@ app.use("/v1/auth/", authRouter);
 app.use("/v1/users/", userRouter);
 app.use("/v1/", reviewRouter);
 app.use("/v1/", publishKitRouter);
+app.use("/v1/", socialRouter);
 
 app.get("/", (req: Request, res: Response) => {
   return res.send("Express Typescript on Vercel");
@@ -81,4 +84,5 @@ server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}!`);
   connectDB();
   startKitWorker();
+  startPublishWorker();
 });

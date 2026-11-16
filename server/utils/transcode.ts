@@ -55,3 +55,8 @@ export const sampleFrames = async (src: string, duration: number, outDir: string
   }
   return files;
 };
+
+/** Instagram-safe mp4: H.264/AAC, <=1080 wide, moov atom first. */
+export const toMp4 = (src: string, out: string) =>
+  run("ffmpeg", ["-y", "-i", src, "-vf", "scale='min(1080,iw)':-2", "-c:v", "libx264", "-preset", "veryfast", "-crf", "23",
+    "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", out]);

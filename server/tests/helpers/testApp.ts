@@ -7,6 +7,7 @@ import authRouter from "../../routes/auth.route";
 import userRouter from "../../routes/user.route";
 import reviewRouter from "../../routes/review.route";
 import publishKitRouter from "../../routes/publishkit.route";
+import socialRouter from "../../routes/social.route";
 import { ErrorMiddleware } from "../../middleware/error";
 
 export const buildTestApp = () => {
@@ -17,6 +18,7 @@ export const buildTestApp = () => {
   app.use("/v1/users/", userRouter);
   app.use("/v1/", reviewRouter);
   app.use("/v1/", publishKitRouter);
+  app.use("/v1/", socialRouter);
   app.use(ErrorMiddleware);
   return app;
 };

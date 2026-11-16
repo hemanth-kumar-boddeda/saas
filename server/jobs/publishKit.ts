@@ -16,7 +16,7 @@ import {
 
 const QUEUE = "publish-kit";
 
-const connection = () => {
+export const redisConnection = () => {
   const u = new URL(process.env.REDIS_URL as string);
   return {
     host: u.hostname, port: Number(u.port) || 6379,
@@ -29,12 +29,12 @@ const connection = () => {
 
 let queue: Queue | null = null;
 export const enqueueKit = async (kitId: string) => {
-  queue ??= new Queue(QUEUE, { connection: connection() });
+  queue ??= new Queue(QUEUE, { connection: redisConnection() });
   await queue.add("kit", { kitId }, { jobId: kitId, removeOnComplete: true, removeOnFail: 100 });
 };
 
 export const startKitWorker = () => {
-  const w = new Worker(QUEUE, (job) => runKit(job.data.kitId), { connection: connection(), concurrency: 1 });
+  const w = new Worker(QUEUE, (job) => runKit(job.data.kitId), { connection: redisConnection(), concurrency: 1 });
   w.on("error", (e) => logger.error("kit_worker_error", { errorMessage: e.message }));
   return w;
 };
