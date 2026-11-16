@@ -5,7 +5,7 @@ import fs from "fs";
 import path from "path";
 import { Project, ProjectVersion } from "../models/review.model";
 import { Channel, PublishKit } from "../models/publishkit.model";
-import { askJson, transcribe, MODELS } from "../utils/ai";
+import { askJson, transcribe, rankFramesLocal, visionAvailable } from "../utils/ai";
 import { extractAudio, sampleFrames, frameAt, frameTimes } from "../utils/transcode";
 import { textOnFrame, cutout, tintedTop } from "../utils/thumbnail";
 import { resolveKey, versionDir } from "../utils/storage";
@@ -71,13 +71,15 @@ const pipeline = async (kitId: string) => {
 
   await step(kitId, "ranking_frames");
   const frameFiles = await sampleFrames(src, version.duration, path.join(dir, "frames"));
-  const ranked = await askJson(frameRanking, {
-    model: MODELS.smart,
-    system: `You pick YouTube/Instagram thumbnail frames. Score each frame 0-100 on: clear face, expression, composition, sharpness. ${ctx}`,
-    user: `There are ${frameFiles.length} frames, indexed 0-${frameFiles.length - 1}. Return {"rankings":[{"index":number,"score":number,"reason":string}]} for every frame.`,
-    images: await Promise.all(frameFiles.map((f) => fs.promises.readFile(f))),
-    maxTokens: 2048,
-  });
+  const ranked = visionAvailable()
+    ? await askJson(frameRanking, {
+        tier: "smart",
+        system: `You pick YouTube/Instagram thumbnail frames. Score each frame 0-100 on: clear face, expression, composition, sharpness. ${ctx}`,
+        user: `There are ${frameFiles.length} frames, indexed 0-${frameFiles.length - 1}. Return {"rankings":[{"index":number,"score":number,"reason":string}]} for every frame.`,
+        images: await Promise.all(frameFiles.map((f) => fs.promises.readFile(f))),
+        maxTokens: 2048,
+      })
+    : { rankings: await rankFramesLocal(frameFiles) }; // provider without vision: sharpness/exposure/contrast
   const top = bestFrames(ranked.rankings, frameFiles.length, 3);
   if (!top.length) throw new Error("AI ranking returned no usable frames");
 
@@ -85,7 +87,7 @@ const pipeline = async (kitId: string) => {
   const transcript = clipTranscript(text);
   const [copy, extras] = await Promise.all([
     askJson(copyOutput, {
-      model: MODELS.smart,
+      tier: "smart",
       system: `You are a YouTube/Instagram SEO and packaging strategist. Rules: be honest and specific to the transcript; never promise views or virality; no clickbait that the video does not deliver; no emojis spam. ${ctx}`,
       user: `Video length: ${Math.round(version.duration)}s. Transcript:\n${transcript}\n\nReturn {"titles":[3 distinct options],"description":string,"chapters":[{"start":seconds,"title":string}]}.
 Titles: under 60 characters, primary search keyword in the first half, each uses a different angle (benefit, curiosity, how-to).
@@ -93,7 +95,7 @@ Description: first 150 characters hook the viewer and contain the main keyword (
 Chapters: real transcript timing, first at 0, at least 3, titles descriptive and keyword-aware.`,
     }),
     askJson(tagsOutput, {
-      model: MODELS.fast,
+      tier: "fast",
       system: `You write short metadata for videos. ${ctx}`,
       user: `Transcript:\n${transcript}\n\nReturn {"hashtags":[3-8 relevant #tags, mix broad and niche],"tags":[10-20 search phrases people would type, most important first],"thumbnailTexts":[3 bold phrases, max 4 words each, that match the video and add intrigue without misleading]}.`,
       maxTokens: 1024,

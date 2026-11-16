@@ -17,7 +17,7 @@ export default function PrivacyPage() {
         <p>Uploaded videos are stored on the server, transcoded for streaming and attached to their project. Comments are stored with the name of the commenter. Guests need no account; a guest&apos;s name is stored on their comments. Revoke a link at any time.</p>
       </Section>
       <Section title="AI processing">
-        <p>When the owner generates a publish kit, the audio goes to OpenAI for transcription, and the transcript plus sampled video frames go to Anthropic to rank thumbnails and write copy. Your channel profile is included in those requests. Nothing is generated until the owner asks.</p>
+        <p>When the owner generates a publish kit, the audio is sent for transcription and the transcript plus sampled video frames are sent to the configured AI provider (Google Gemini, Groq, Anthropic or OpenAI) to rank thumbnails and write copy. Your channel profile is included in those requests. Nothing is generated until the owner asks.</p>
       </Section>
       <Section title="Connected accounts and publishing">
         <p>YouTube and Instagram access tokens are stored encrypted and never shown in the app. Publishing sends the original video, your edited text and the chosen thumbnail to that platform. For Instagram, a short-lived signed link lets Meta fetch the video. Disconnect an account to delete its tokens.</p>
