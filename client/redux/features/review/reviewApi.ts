@@ -106,6 +106,10 @@ export const reviewApi = apiSlice.injectEndpoints({
       query: ({ id, body }) => ({ url: `projects/${id}/publish`, method: "POST", body }),
       invalidatesTags: ["Publications", "Project", "Projects"],
     }),
+    cancelPublication: b.mutation<any, { id: string; pid: string }>({
+      query: ({ id, pid }) => ({ url: `projects/${id}/publications/${pid}`, method: "DELETE" }),
+      invalidatesTags: ["Publications", "Project", "Projects"],
+    }),
     listPublications: b.query<any, string>({ query: (id) => `projects/${id}/publications`, providesTags: ["Publications"] }),
     enterLink: b.mutation<any, { token: string; name?: string; password?: string }>({
       query: (body) => ({ url: "review-links/enter", method: "POST", body }),
@@ -118,7 +122,7 @@ export const {
   useListCommentsQuery, useAddCommentMutation, useAddVoiceCommentMutation, useSetCommentStatusMutation, useDecideMutation, useApprovalsQuery,
   useCreateLinkMutation, useListLinksQuery, useRevokeLinkMutation, useEnterLinkMutation,
   useGetKitQuery, useSetBriefMutation, useAddReferenceMutation, useDeleteReferenceMutation, useReferenceStreamQuery, useInviteEditorMutation, useSendFeedbackMutation, useLinkInfoQuery, useAddEditorMutation, useStartKitMutation, useEditKitMutation, useListChannelsQuery, useCreateChannelMutation, useSetProjectChannelMutation,
-  useListAccountsQuery, useConnectAccountMutation, useDisconnectAccountMutation, usePublishMutation, useListPublicationsQuery,
+  useListAccountsQuery, useConnectAccountMutation, useDisconnectAccountMutation, usePublishMutation, useCancelPublicationMutation, useListPublicationsQuery,
 } = reviewApi;
 
 export const errMsg = (e: any): string => e?.data?.message || "Something went wrong. Please try again.";

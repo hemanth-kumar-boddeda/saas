@@ -7,7 +7,7 @@ import { PublishKit } from "../models/publishkit.model";
 import { Publication, SocialAccount } from "../models/social.model";
 import { assertCan } from "../services/reviewLogic";
 import { encrypt, publishInput, resolveSchedule, signState, verifyMedia, verifyState } from "../services/publishLogic";
-import { enqueuePublish } from "../jobs/publish";
+import { accessToken, dequeuePublish, enqueuePublish } from "../jobs/publish";
 import { resolveKey, versionDir } from "../utils/storage";
 import * as yt from "../utils/youtube";
 import * as ig from "../utils/instagram";
@@ -81,7 +81,7 @@ export const createPublication = CatchAsyncError(async (req: Request, res: Respo
   const v: any = await ProjectVersion.findOne({ project: a.project._id, number: a.project.currentVersion });
   if (!v?.sourceKey || v.processing !== "ready") throw new ErrorHandler(409, "Publishing needs the uploaded video");
   const existing: any[] = await Publication.find({ project: a.project._id, kit: kit._id, provider: input.provider });
-  if (existing.some((p) => p.status !== "failed")) throw new ErrorHandler(409, `Already ${existing[0].status} on ${input.provider} for this kit`);
+  if (existing.some((p) => p.status !== "failed" && p.status !== "canceled")) throw new ErrorHandler(409, `Already ${existing[0].status} on ${input.provider} for this kit`);
 
   const pub: any = await Publication.create({
     project: a.project._id, kit: kit._id, account: account._id, provider: input.provider,
@@ -100,6 +100,35 @@ export const createPublication = CatchAsyncError(async (req: Request, res: Respo
 export const listPublications = CatchAsyncError(async (req: Request, res: Response) => {
   const rows: any[] = await Publication.find({ project: req.actor!.project._id }).sort({ createdAt: -1 });
   res.json({ success: true, publications: rows.map(pubJson) });
+});
+
+/**
+ * Cancels a post that has not gone out yet. Instagram: still waiting in the queue. YouTube: uploaded as
+ * private with a publish time, so cancelling deletes that upload. Once released (or running) it is too late.
+ */
+export const cancelPublication = CatchAsyncError(async (req: Request, res: Response) => {
+  const a = req.actor!;
+  assertCan(a.role, "publish");
+  const pub: any = mongoose.isValidObjectId(req.params.pid) ? await Publication.findOne({ _id: req.params.pid, project: a.project._id }) : null;
+  if (!pub) throw new ErrorHandler(404, "Publication not found");
+  if (!pub.scheduledAt || pub.scheduledAt.getTime() <= Date.now() || (pub.status !== "queued" && pub.status !== "scheduled"))
+    throw new ErrorHandler(409, pub.status === "canceled" ? "Already canceled" : "Only a scheduled post that has not been released yet can be canceled");
+  if (pub.status === "scheduled") {
+    // Uploaded to YouTube already: remove it there first, so a failure leaves everything as it was.
+    const acc: any = await SocialAccount.findById(pub.account);
+    if (!acc || !pub.externalId) throw new ErrorHandler(409, "The connected account is gone. Delete the private video in YouTube Studio.");
+    let token: string;
+    try { token = await accessToken(acc); } catch { throw new ErrorHandler(409, "Reconnect the account to cancel this post"); }
+    await yt.deleteVideo(token, pub.externalId);
+  }
+  const done: any = await Publication.updateOne({ _id: pub._id, status: pub.status }, { status: "canceled", error: undefined });
+  if (!done.matchedCount) throw new ErrorHandler(409, "This post just started publishing and can no longer be canceled");
+  await dequeuePublish(String(pub._id)).catch(() => {});
+  // Nothing else live for this project: it is merely approved again.
+  const rest: any[] = await Publication.find({ project: a.project._id });
+  if (!rest.some((p) => p.status === "published" || p.status === "scheduled" || p.status === "publishing"))
+    await Project.updateOne({ _id: a.project._id, status: "published" }, { status: "approved" });
+  res.json({ success: true, publication: pubJson({ ...pub.toObject(), status: "canceled" }) });
 });
 
 /**

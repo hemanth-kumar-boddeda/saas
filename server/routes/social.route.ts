@@ -13,6 +13,7 @@ r.get("/social/:provider/callback", c.callback); // signed state, no session
 r.get("/public-media/:pid/:kind", c.publicMedia); // signed token, for Meta's fetcher
 
 r.post("/projects/:id/publish", member, publishLimiter, c.createPublication);
+r.delete("/projects/:id/publications/:pid", member, publishLimiter, c.cancelPublication);
 r.get("/projects/:id/publications", member, c.listPublications);
 
 export default r;

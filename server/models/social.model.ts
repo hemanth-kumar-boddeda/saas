@@ -22,7 +22,7 @@ const publicationSchema = new Schema(
     kit: { type: Schema.Types.ObjectId, ref: "PublishKit", required: true },
     account: { type: Schema.Types.ObjectId, ref: "SocialAccount", required: true },
     provider: { type: String, enum: ["youtube", "instagram"], required: true },
-    status: { type: String, enum: ["queued", "publishing", "scheduled", "published", "failed"], default: "queued" },
+    status: { type: String, enum: ["queued", "publishing", "scheduled", "published", "failed", "canceled"], default: "queued" },
     privacy: String,
     scheduledAt: Date,
     externalId: String,

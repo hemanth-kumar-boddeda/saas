@@ -24,9 +24,11 @@ vi.mock("../models/publishkit.model", () => ({ PublishKit: m.PublishKit, Channel
 vi.mock("../models/social.model", () => ({ SocialAccount: m.SocialAccount, Publication: m.Publication }));
 vi.mock("../utils/notify", () => ({ notifyProject: vi.fn() }));
 const enqueue = vi.hoisted(() => vi.fn());
-vi.mock("../jobs/publish", () => ({ enqueuePublish: enqueue }));
+const jobs = vi.hoisted(() => ({ dequeue: vi.fn(), token: vi.fn() }));
+vi.mock("../jobs/publish", () => ({ enqueuePublish: enqueue, dequeuePublish: jobs.dequeue, accessToken: jobs.token }));
 const exchange = vi.hoisted(() => vi.fn());
-vi.mock("../utils/youtube", () => ({ authUrl: (s: string) => `https://accounts.example/auth?state=${s}`, exchangeCode: exchange }));
+const ytDelete = vi.hoisted(() => vi.fn());
+vi.mock("../utils/youtube", () => ({ authUrl: (s: string) => `https://accounts.example/auth?state=${s}`, exchangeCode: exchange, deleteVideo: ytDelete }));
 vi.mock("../utils/instagram", () => ({ authUrl: (s: string) => `https://fb.example/auth?state=${s}`, exchangeCode: vi.fn() }));
 vi.mock("../controllers/user.controller", () => ({ generateAccessToken: (_q: any, _r: any, next: any) => next() }));
 vi.mock("../middleware/auth", async () => {
@@ -65,6 +67,9 @@ const later = (min: number) => new Date(Date.now() + min * 60000).toISOString();
 beforeEach(async () => {
   for (const model of Object.values(m)) (model as any).rows.length = 0;
   enqueue.mockReset().mockResolvedValue(undefined);
+  jobs.dequeue.mockReset().mockResolvedValue(undefined);
+  jobs.token.mockReset().mockResolvedValue("tok");
+  ytDelete.mockReset().mockResolvedValue(undefined);
   owner = `owner${++seq}`;
   const p = await m.Project.create({ title: "Vid", owner, editors: ["editor"] });
   pid = String(p._id);
@@ -199,5 +204,79 @@ describe("public media", () => {
     const p = await m.Publication.create({ project: pid, provider: "youtube" });
     const id = String(p._id);
     expect((await request(app).get(`/v1/public-media/${id}/video?t=${signMedia(id, "video")}`)).status).toBe(404);
+  });
+});
+
+describe("cancel a scheduled post", () => {
+  const cancel = (id: string, who = "owner") => request(app).delete(`/v1/projects/${pid}/publications/${id}`).set(as(who));
+  const seed = (over: any = {}) => m.Publication.create({
+    project: pid, kit: "k", account: accId, provider: "youtube", status: "scheduled", externalId: "vid1",
+    scheduledAt: new Date(Date.now() + 3600_000), ...over,
+  });
+
+  it("YouTube: deletes the private upload, marks canceled and reopens the project", async () => {
+    await m.Project.updateOne({ _id: pid }, { status: "published" });
+    const p = await seed();
+    const r = await cancel(String(p._id));
+    expect(r.status).toBe(200);
+    expect(r.body.publication.status).toBe("canceled");
+    expect(ytDelete).toHaveBeenCalledWith("tok", "vid1");
+    expect(m.Publication.rows[0].status).toBe("canceled");
+    expect(m.Project.rows[0].status).toBe("approved");
+  });
+  it("YouTube: keeps the post scheduled when YouTube refuses", async () => {
+    ytDelete.mockRejectedValue(new Error("boom"));
+    const p = await seed();
+    expect((await cancel(String(p._id))).status).toBe(500);
+    expect(m.Publication.rows[0].status).toBe("scheduled");
+  });
+  it("YouTube: asks to reconnect when the token cannot be refreshed", async () => {
+    jobs.token.mockRejectedValue(new Error("reconnect"));
+    const p = await seed();
+    const r = await cancel(String(p._id));
+    expect(r.status).toBe(409);
+    expect(ytDelete).not.toHaveBeenCalled();
+    expect(m.Publication.rows[0].status).toBe("scheduled");
+  });
+  it("Instagram: removes the waiting job, no platform call", async () => {
+    const p = await seed({ provider: "instagram", status: "queued", externalId: undefined });
+    expect((await cancel(String(p._id))).status).toBe(200);
+    expect(jobs.dequeue).toHaveBeenCalledWith(String(p._id));
+    expect(ytDelete).not.toHaveBeenCalled();
+    expect(m.Publication.rows[0].status).toBe("canceled");
+  });
+  it("keeps the project published while another post is live", async () => {
+    await m.Project.updateOne({ _id: pid }, { status: "published" });
+    await seed({ provider: "instagram", status: "published", scheduledAt: undefined });
+    const p = await seed();
+    await cancel(String(p._id));
+    expect(m.Project.rows[0].status).toBe("published");
+  });
+  it("too late: published, running, failed, already released or not scheduled", async () => {
+    for (const over of [{ status: "published" }, { status: "publishing" }, { status: "failed" }, { scheduledAt: new Date(Date.now() - 1000) }, { scheduledAt: undefined, status: "queued" }]) {
+      m.Publication.rows.length = 0;
+      const p = await seed(over);
+      expect((await cancel(String(p._id))).status).toBe(409);
+      expect(ytDelete).not.toHaveBeenCalled();
+    }
+  });
+  it("canceling twice is refused and a canceled kit can be scheduled again", async () => {
+    const p = await seed();
+    await cancel(String(p._id));
+    const again = await cancel(String(p._id));
+    expect(again.status).toBe(409);
+    expect(again.body.message).toMatch(/already canceled/i);
+    expect((await pub({ scheduledAt: later(60) })).status).toBe(202);
+  });
+  it("only the owner, only this project", async () => {
+    const p = await seed();
+    expect((await cancel(String(p._id), "editor")).status).toBe(403);
+    expect((await cancel(String(p._id), "stranger")).status).toBe(404);
+    expect((await cancel("not-an-id")).status).toBe(404);
+    expect((await cancel("a".repeat(24))).status).toBe(404);
+    const other = await m.Project.create({ title: "Other", owner, editors: [] });
+    const foreign = await m.Publication.create({ project: String(other._id), kit: "k", account: accId, provider: "youtube", status: "scheduled", scheduledAt: new Date(Date.now() + 3600_000) });
+    expect((await cancel(String(foreign._id))).status).toBe(404);
+    expect(ytDelete).not.toHaveBeenCalled();
   });
 });

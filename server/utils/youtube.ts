@@ -96,3 +96,9 @@ export const uploadCaptions = async (accessToken: string, videoId: string, srt: 
     "captions"
   );
 };
+
+/** Deletes an uploaded video (used to cancel a scheduled release). Already gone counts as done. */
+export const deleteVideo = async (accessToken: string, videoId: string) => {
+  const r = await fetch(`https://www.googleapis.com/youtube/v3/videos?id=${encodeURIComponent(videoId)}`, { method: "DELETE", headers: { Authorization: `Bearer ${accessToken}` } });
+  if (r.status !== 404) await api(r, "delete");
+};

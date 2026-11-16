@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { toast } from "react-toastify";
 import {
-  errMsg, useConnectAccountMutation, useDisconnectAccountMutation, useListAccountsQuery, useListPublicationsQuery, usePublishMutation,
+  errMsg, useConnectAccountMutation, useDisconnectAccountMutation, useListAccountsQuery, useCancelPublicationMutation, useListPublicationsQuery, usePublishMutation,
 } from "../../../redux/features/review/reviewApi";
 
 const btn = "cf-btn text-sm";
@@ -17,6 +17,7 @@ export default function Publish({ projectId }: { projectId: string }) {
   const [connect] = useConnectAccountMutation();
   const [disconnect] = useDisconnectAccountMutation();
   const [publish, { isLoading }] = usePublishMutation();
+  const [cancel] = useCancelPublicationMutation();
   const accounts: any[] = data?.accounts || [];
   const [accountId, setAccountId] = useState("");
   const [privacy, setPrivacy] = useState("public");
@@ -71,6 +72,12 @@ export default function Publish({ projectId }: { projectId: string }) {
             {NAMES[p.provider]} · {p.status}{p.scheduledAt ? ` for ${new Date(p.scheduledAt).toLocaleString()}` : ""}
             {p.url && <> · <a className="underline" href={p.url} target="_blank" rel="noreferrer noopener">open</a></>}
             {p.error && <span className="text-red-300"> · {p.error}</span>}
+            {p.scheduledAt && (p.status === "scheduled" || p.status === "queued") && new Date(p.scheduledAt).getTime() > Date.now() && (
+              <> · <button className="underline text-red-300" onClick={() => {
+                const msg = p.provider === "youtube" ? "Cancel this scheduled post? The private upload on YouTube is deleted; you can schedule again later." : "Cancel this scheduled post?";
+                if (window.confirm(msg)) cancel({ id: projectId, pid: p._id }).unwrap().then(() => toast.success("Scheduled post canceled")).catch((e) => toast.error(errMsg(e)));
+              }}>Cancel</button></>
+            )}
           </li>
         ))}
       </ul>

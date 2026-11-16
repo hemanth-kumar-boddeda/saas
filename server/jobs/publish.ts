@@ -22,6 +22,12 @@ export const enqueuePublish = async (pubId: string, delayMs = 0) => {
   await queue.add("publish", { pubId }, { jobId: pubId, delay: Math.max(0, delayMs), removeOnComplete: true, removeOnFail: 100, attempts: 1 });
 };
 
+/** Removes a waiting (delayed) job so Instagram posts do not fire. The worker also ignores canceled rows. */
+export const dequeuePublish = async (pubId: string) => {
+  queue ??= new Queue(QUEUE, { connection: redisConnection() });
+  await (await queue.getJob(pubId))?.remove().catch(() => {});
+};
+
 export const startPublishWorker = () => {
   const w = new Worker(QUEUE, (job) => runPublish(job.data.pubId), { connection: redisConnection(), concurrency: 1 });
   w.on("error", (e) => logger.error("publish_worker_error", { errorMessage: e.message }));
@@ -29,7 +35,7 @@ export const startPublishWorker = () => {
 };
 
 /** Valid access token, refreshing Google tokens when near expiry. Marks the account when re-login is needed. */
-const accessToken = async (acc: any): Promise<string> => {
+export const accessToken = async (acc: any): Promise<string> => {
   if (acc.expiresAt && acc.expiresAt.getTime() > Date.now() + 60_000) return decrypt(acc.accessToken);
   if (acc.provider === "youtube" && acc.refreshToken) {
     try {
@@ -64,7 +70,9 @@ const publish = async (pubId: string) => {
   ]);
   const version: any = await ProjectVersion.findOne({ project: pub.project, number: project.currentVersion });
   if (!kit || !acc || !version?.sourceKey) throw new Error("Kit, account or source video is missing");
-  await Publication.updateOne({ _id: pubId }, { status: "publishing", error: undefined });
+  // Conditional on the status we read, so a cancel that landed meanwhile wins.
+  const claimed: any = await Publication.updateOne({ _id: pubId, status: pub.status }, { status: "publishing", error: undefined });
+  if (!claimed.matchedCount) return;
   const token = await accessToken(acc);
   const src = resolveKey(version.sourceKey);
   const thumb = kit.thumbnails?.[kit.chosenThumbnail];
