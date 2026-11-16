@@ -492,6 +492,11 @@ body {
     padding: 8px 12px;
   }
 
+  /* Phones: 44px minimum touch target for buttons, inputs and tappable chips. */
+  @media (max-width: 767px) {
+    .cf-btn, .cf-input, button.cf-chip, a.cf-chip { min-height: 44px; }
+  }
+
   .cf-chip {
     display: inline-flex;
     align-items: center;
