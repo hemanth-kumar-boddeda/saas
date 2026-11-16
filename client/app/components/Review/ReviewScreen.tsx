@@ -136,7 +136,7 @@ export default function ReviewScreen({ projectId, guest }: { projectId: string; 
         </div>
       ) : (
         <div className="grid gap-4 lg:grid-cols-[1fr_380px]">
-          <section>
+          <section className="min-w-0">
             {version.processing === "pending" && <div className={`${card} flex items-center gap-3`} role="status"><span className="cf-skeleton h-3 w-3 !rounded-full" />Processing your video. The preview appears here automatically.</div>}
             {version.processing === "failed" && <div className={`${card} text-red-300`}>Processing failed. Upload this version again.</div>}
             {version.kind === "link" && !ytId && !ig && (
@@ -183,7 +183,7 @@ export default function ReviewScreen({ projectId, guest }: { projectId: string; 
             {!isLatest && <p className="mt-2 text-sm text-amber-300">You are viewing an older version. Comments here belong to this version only.</p>}
           </section>
 
-          <aside className={`${card} flex flex-col max-h-[80vh]`}>
+          <aside className={`${card} flex min-w-0 flex-col max-h-[80vh]`}>
             <div className="flex items-center gap-2 mb-2">
               <select aria-label="Filter" className={`${input} !w-auto`} value={status} onChange={(e) => setStatus(e.target.value)}>
                 <option value="">All</option>
@@ -217,7 +217,7 @@ export default function ReviewScreen({ projectId, guest }: { projectId: string; 
       )}
 
       {(role === "owner" || role === "editor") && (
-        <div className="mt-6 grid gap-4 md:grid-cols-2">
+        <div className="mt-6 grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-2">
           <UploadVersion projectId={projectId} />
           {guest && <p className="text-sm text-cf-muted self-center">Finished editing? Upload your new cut (or paste a link) here. The owner is notified.</p>}
           {role === "owner" && version && isLatest && <ApprovalBox projectId={projectId} vid={vid} status={project.status} />}

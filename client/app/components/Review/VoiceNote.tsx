@@ -14,7 +14,7 @@ export function VoicePlayer({ url, seconds, transcript, transcriptStatus }: { ur
       {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
       <audio controls preload="none" src={mediaUrl(url)} className="h-8 w-full max-w-[260px]" aria-label="Voice note" />
     </div>
-    {transcript && <p className="mt-1 text-xs italic text-cf-muted whitespace-pre-wrap break-words" data-testid="transcript">“{transcript}”</p>}
+    {transcript && <p className="mt-1 text-xs italic text-cf-muted whitespace-pre-wrap [overflow-wrap:anywhere]" data-testid="transcript">“{transcript}”</p>}
     {transcriptStatus === "pending" && <p className="mt-1 text-xs text-cf-muted">Transcribing…</p>}
     </div>
   );

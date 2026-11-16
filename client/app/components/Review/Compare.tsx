@@ -33,7 +33,7 @@ export default function Compare({ projectId, versions, onClose }: { projectId: s
   const seek = (t: number) => { left.current?.seek(t); right.current?.seek(t); setNow(t); };
   const pick = (v: any) => `Version ${v.number}`;
   const select = (value: string, set: (s: string) => void, label: string) => (
-    <select aria-label={label} className="cf-input !w-auto" value={value} onChange={(e) => set(e.target.value)}>
+    <select aria-label={label} className="cf-input !w-auto min-h-[44px]" value={value} onChange={(e) => set(e.target.value)}>
       {playable.map((v) => <option key={v._id} value={v._id}>{pick(v)}</option>)}
     </select>
   );
@@ -42,7 +42,7 @@ export default function Compare({ projectId, versions, onClose }: { projectId: s
       <div className="mb-3 flex flex-wrap items-center gap-3">
         <h2 className="text-lg font-semibold">Compare versions</h2>
         {select(a, setA, "Left version")}<span className="text-cf-muted">vs</span>{select(b, setB, "Right version")}
-        <button className="cf-btn cf-btn-secondary ml-auto text-sm" onClick={onClose}>Close compare</button>
+        <button className="cf-btn cf-btn-secondary ml-auto min-h-[44px] text-sm" onClick={onClose}>Close compare</button>
       </div>
       {!va || !vb ? <p className="text-sm text-cf-muted">Pick two processed uploads.</p> : a === b ? <p className="text-sm text-amber-300">Pick two different versions.</p> : (
         <>
@@ -50,10 +50,10 @@ export default function Compare({ projectId, versions, onClose }: { projectId: s
             <Side key={a} projectId={projectId} version={va} label={pick(va)} handle={left} muted />
             <Side key={b} projectId={projectId} version={vb} label={`${pick(vb)} (sound)`} handle={right} onTime={setNow} />
           </div>
-          <div className="mt-3 flex items-center gap-3">
-            <button className="cf-btn cf-btn-primary text-sm" onClick={() => { const t = right.current?.time() ?? 0; seek(t); left.current?.play(); right.current?.play(); }}>Play both</button>
-            <button className="cf-btn cf-btn-secondary text-sm" onClick={() => { left.current?.pause(); right.current?.pause(); }}>Pause both</button>
-            <input type="range" aria-label="Scrub both videos" className="flex-1" min={0} max={Math.max(1, Math.floor(max))} step={0.1} value={Math.min(now, max)} onChange={(e) => seek(Number(e.target.value))} />
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <button className="cf-btn cf-btn-primary min-h-[44px] text-sm" onClick={() => { const t = right.current?.time() ?? 0; seek(t); left.current?.play(); right.current?.play(); }}>Play both</button>
+            <button className="cf-btn cf-btn-secondary min-h-[44px] text-sm" onClick={() => { left.current?.pause(); right.current?.pause(); }}>Pause both</button>
+            <input type="range" aria-label="Scrub both videos" className="min-w-0 basis-full flex-1 sm:basis-0" min={0} max={Math.max(1, Math.floor(max))} step={0.1} value={Math.min(now, max)} onChange={(e) => seek(Number(e.target.value))} />
             <span className="text-xs text-cf-muted tabular-nums">{mmss(now)}</span>
           </div>
         </>
