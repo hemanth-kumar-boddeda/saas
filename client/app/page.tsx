@@ -75,6 +75,7 @@ export default function Page() {
         </main>
 
         <MarketingFooter />
+        <div className="h-20" aria-hidden="true" />
       </div>
     </>
   );

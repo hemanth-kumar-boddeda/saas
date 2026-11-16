@@ -229,7 +229,7 @@ export default function ReviewScreen({ projectId, guest }: { projectId: string; 
       {version && !drawing && !composerVisible && (
         <button
           type="button"
-          className="cf-btn cf-btn-primary fixed bottom-4 left-1/2 z-30 -translate-x-1/2 px-5 py-3 text-sm shadow-2xl shadow-black/60 lg:hidden"
+          className="cf-btn cf-btn-primary fixed bottom-24 left-1/2 z-30 -translate-x-1/2 px-5 py-3 text-sm shadow-2xl shadow-black/60 lg:hidden"
           onClick={() => { player.current?.pause(); const t = document.getElementById("comment-box"); t?.scrollIntoView({ block: "center", behavior: "smooth" }); setTimeout(() => t?.focus(), 350); }}
         >
           {version.kind === "link" && !ytId ? "Add comment" : `Comment at ${fmt(now)}`}

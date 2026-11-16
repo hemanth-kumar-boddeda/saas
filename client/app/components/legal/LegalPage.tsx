@@ -16,6 +16,7 @@ export default function LegalPage({ chip, title, intro, children }: { chip: stri
           <div className="cf-glass cf-rise mt-10 space-y-8 p-6 sm:p-8" style={{ "--i": 3 } as React.CSSProperties}>{children}</div>
         </main>
         <MarketingFooter />
+        <div className="h-20" aria-hidden="true" />
       </div>
     </div>
   );
