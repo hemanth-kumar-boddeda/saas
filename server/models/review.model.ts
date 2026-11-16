@@ -59,6 +59,9 @@ const commentSchema = new Schema(
     annotation: Schema.Types.Mixed, // { strokes: [{ tool, color, points }] } validated by zod before saving
     audioKey: String, // private path under STORAGE_DIR, never sent to clients
     audioDuration: Number,
+    // Speech-to-text of the voice note, filled in after saving. "none" = no transcriber configured.
+    transcript: { type: String, maxlength: 4000 },
+    transcriptStatus: { type: String, enum: ["pending", "ready", "failed", "none"] },
     status: { type: String, enum: ["open", "resolved"], default: "open" },
     // Either a user or a named guest (guestName + link).
     author: { type: Schema.Types.ObjectId, ref: "User" },

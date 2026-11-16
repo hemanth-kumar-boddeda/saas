@@ -19,6 +19,8 @@ import { decrypt, encrypt } from "../services/publishLogic";
 import { probeDuration, toHls, probeAudioDuration, toVoiceM4a } from "../utils/transcode";
 import { resolveKey, versionDir, storageRoot } from "../utils/storage";
 import { logger } from "../utils/logger";
+import { transcribe } from "../utils/ai";
+import { pickTranscriber } from "../services/aiProviders";
 import { autoStartKit } from "../jobs/autoKit";
 
 const oid = (v: string, what = "Resource") => {
@@ -162,6 +164,7 @@ const commentJson = (c: any) => ({
   _id: c._id, version: c.version, parentId: c.parentId, timecode: c.timecode, body: c.body, status: c.status,
   authorName: c.guestName || c.authorName || "User", authorKey: c.authorKey, createdAt: c.createdAt, draft: !!c.draft, annotation: c.annotation || undefined, resolvedByName: c.resolvedByName,
   audioUrl: c.audioKey ? `/v1/voice/${c._id}?t=${signStreamToken(String(c._id))}` : undefined, audioDuration: c.audioDuration,
+  transcript: c.transcriptStatus === "ready" ? c.transcript : undefined, transcriptStatus: c.audioKey ? c.transcriptStatus : undefined,
 });
 
 export const listComments = CatchAsyncError(async (req: Request, res: Response) => {
@@ -416,7 +419,7 @@ export const sendFeedback = CatchAsyncError(async (req: Request, res: Response) 
   if (!(a.project.editorInvites ?? []).length && !(a.project.editors ?? []).length) throw new ErrorHandler(409, "Invite your editor first so they receive the feedback");
   await ReviewComment.updateMany({ version: v._id, authorKey: a.key, draft: true }, { draft: false });
   if (a.project.status === "in_review") await Project.updateOne({ _id: a.project._id }, { status: "changes_requested" });
-  const lines = drafts.map((d) => `${Math.floor(d.timecode / 60)}:${String(Math.floor(d.timecode % 60)).padStart(2, "0")}  ${d.audioKey ? `[voice note ${Math.round(d.audioDuration || 0)}s]${d.body ? " " + d.body : ""}` : d.body}`).join("\n");
+  const lines = drafts.map((d) => `${Math.floor(d.timecode / 60)}:${String(Math.floor(d.timecode % 60)).padStart(2, "0")}  ${d.audioKey ? `[voice note ${Math.round(d.audioDuration || 0)}s]${d.body ? " " + d.body : ""}${d.transcriptStatus === "ready" ? ` "${d.transcript}"` : ""}` : d.body}`).join("\n");
   let sent = 0;
   for (const inv of a.project.editorInvites ?? []) {
     const link: any = await ReviewLink.findById(inv.linkId);
@@ -430,6 +433,29 @@ export const sendFeedback = CatchAsyncError(async (req: Request, res: Response) 
 
 // ---- voice notes ----
 export const MAX_VOICE_SECONDS = 180;
+
+// Transcription costs money: at most N notes per actor per hour, the rest stay audio-only.
+// ponytail: per-process counter, move to Redis if the API runs on several instances.
+const transcribed = new Map<string, number[]>();
+const MAX_TRANSCRIPTS_PER_HOUR = Number(process.env.TRANSCRIPTS_PER_HOUR) || 30;
+const mayTranscribe = (key: string) => {
+  const now = Date.now();
+  const recent = (transcribed.get(key) ?? []).filter((t) => now - t < 3_600_000);
+  if (recent.length >= MAX_TRANSCRIPTS_PER_HOUR) { transcribed.set(key, recent); return false; }
+  transcribed.set(key, [...recent, now]);
+  return true;
+};
+
+/** Background speech-to-text. Never blocks or fails the comment: on error the note just has no text. */
+const transcribeVoice = async (id: string, file: string) => {
+  try {
+    const { text } = await transcribe(file);
+    await ReviewComment.updateOne({ _id: id }, { transcript: text.trim().slice(0, 4000), transcriptStatus: "ready" });
+  } catch (e: any) {
+    logger.error("voice_transcript_failed", { commentId: id, errorMessage: e?.message });
+    await ReviewComment.updateOne({ _id: id }, { transcriptStatus: "failed" }).catch(() => {});
+  }
+};
 
 /** A spoken comment at an exact time. Same rules as text comments (owner's stay drafts until sent). */
 export const addVoiceComment = CatchAsyncError(async (req: Request, res: Response) => {
@@ -463,12 +489,13 @@ export const addVoiceComment = CatchAsyncError(async (req: Request, res: Respons
         _id, project: a.project._id, version: v._id, parentId: parent?._id ?? null,
         timecode: parent ? parent.timecode : input.timecode, body: input.body || "", author: a.userId,
         guestName: a.userId ? undefined : a.name, authorKey: a.key, draft: a.role === "owner", audioDuration: duration, annotation,
-        audioKey: path.relative(storageRoot(), out),
+        audioKey: path.relative(storageRoot(), out), transcriptStatus: pickTranscriber(process.env) && mayTranscribe(a.key) ? "pending" : "none",
       });
     } catch (e) {
       await fs.promises.unlink(out).catch(() => {});
       throw e;
     }
+    if (c.transcriptStatus === "pending") void transcribeVoice(String(c._id), out);
     if (!c.draft) void notifyProject({
       project: a.project, exceptUserId: a.userId, subject: `New voice note on ${a.project.title}`,
       heading: "New voice note", body: `${a.name} left a voice note at ${Math.floor(c.timecode)}s. Open the review to listen.`,

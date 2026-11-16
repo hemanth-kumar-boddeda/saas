@@ -6,12 +6,16 @@ const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).
 export const mediaUrl = (u: string) => new URL(u, process.env.NEXT_PUBLIC_SERVER_URL).href;
 
 /** Player for a stored voice note. */
-export function VoicePlayer({ url, seconds }: { url: string; seconds?: number }) {
+export function VoicePlayer({ url, seconds, transcript, transcriptStatus }: { url: string; seconds?: number; transcript?: string; transcriptStatus?: string }) {
   return (
-    <div className="mt-1 flex items-center gap-2">
+    <div className="mt-1">
+    <div className="flex items-center gap-2">
       <span aria-hidden="true" className="cf-badge border-cf-violet/40 bg-cf-violet/10 text-violet-200">Voice{seconds ? ` ${mmss(seconds)}` : ""}</span>
       {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
       <audio controls preload="none" src={mediaUrl(url)} className="h-8 w-full max-w-[260px]" aria-label="Voice note" />
+    </div>
+    {transcript && <p className="mt-1 text-xs italic text-cf-muted whitespace-pre-wrap break-words" data-testid="transcript">“{transcript}”</p>}
+    {transcriptStatus === "pending" && <p className="mt-1 text-xs text-cf-muted">Transcribing…</p>}
     </div>
   );
 }

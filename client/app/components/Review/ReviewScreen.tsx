@@ -76,10 +76,13 @@ export default function ReviewScreen({ projectId, guest }: { projectId: string; 
   const [attached, setAttached] = useState<Stroke[]>([]);
   const [shownAnn, setShownAnn] = useState<{ t: number; strokes: Stroke[] } | null>(null);
 
+  const [pollComments, setPollComments] = useState(0);
   const { data: cdata, isFetching: loadingComments } = useListCommentsQuery(
     { id: projectId, vid: vid!, status: status || undefined, mine },
-    { skip: !vid }
+    { skip: !vid, pollingInterval: pollComments }
   );
+  // Voice transcripts arrive a few seconds after saving: poll only while one is pending.
+  useEffect(() => { setPollComments(cdata?.comments?.some((c: any) => c.transcriptStatus === "pending") ? 4000 : 0); }, [cdata]);
   const stream = useStreamUrlQuery({ id: projectId, vid: vid! }, { skip: !vid || version?.processing !== "ready" });
 
   if (isLoading)
@@ -248,11 +251,11 @@ function Thread({ c, replies, projectId, vid, role, seek }: any) {
         {c.status === "resolved" && <span className="text-green-300">✓ done{c.resolvedByName ? ` by ${c.resolvedByName}` : ""}</span>}
       </div>
       {c.body && <p className="text-sm whitespace-pre-wrap break-words">{c.body}</p>}
-      {c.audioUrl && <VoicePlayer url={c.audioUrl} seconds={c.audioDuration} />}
+      {c.audioUrl && <VoicePlayer url={c.audioUrl} seconds={c.audioDuration} transcript={c.transcript} transcriptStatus={c.transcriptStatus} />}
       {replies.map((r: any) => (
         <p key={r._id} className="text-sm ml-3 mt-1 pl-2 border-l border-cf-line">
           <span className="text-xs text-cf-muted">{r.authorName}: </span>{r.body}
-          {r.audioUrl && <VoicePlayer url={r.audioUrl} seconds={r.audioDuration} />}
+          {r.audioUrl && <VoicePlayer url={r.audioUrl} seconds={r.audioDuration} transcript={r.transcript} transcriptStatus={r.transcriptStatus} />}
         </p>
       ))}
       <div className="flex gap-3 mt-1 text-xs">

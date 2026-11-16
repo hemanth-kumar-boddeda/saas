@@ -20,6 +20,8 @@ const m = await vi.hoisted(async () => {
 vi.mock("../models/review.model", () => m);
 vi.mock("../models/user.model", () => ({ default: { findOne: vi.fn(), find: vi.fn().mockResolvedValue([]) } }));
 vi.mock("../utils/notify", () => ({ notifyProject: vi.fn(), mailLink: vi.fn().mockResolvedValue(true), reviewLinkUrl: (t: string) => t }));
+const ai = vi.hoisted(() => ({ transcribe: vi.fn() }));
+vi.mock("../utils/ai", () => ({ transcribe: ai.transcribe }));
 vi.mock("../jobs/autoKit", () => ({ autoStartKit: vi.fn() }));
 const media = vi.hoisted(() => ({ duration: 12 }));
 vi.mock("../utils/transcode", () => ({
@@ -125,6 +127,49 @@ describe("voice notes", () => {
     expect((await request(app).get(`/v1/voice/${id}`)).status).toBe(403);
     expect((await request(app).get(`/v1/voice/${id}?t=forged.token`)).status).toBe(403);
     expect((await request(app).get(`/v1/voice/not-an-id?t=x`)).status).toBe(403);
+  });
+});
+
+describe("voice transcripts", () => {
+  const settle = () => new Promise((r) => setTimeout(r, 20));
+  const list = async (who: string) => (await request(app).get(`/v1/projects/${pid}/versions/${vid}/comments`).set(as(who))).body.comments;
+  beforeEach(() => { ai.transcribe.mockReset(); process.env.GROQ_API_KEY = "k"; });
+
+  it("saves the transcript after the note is created", async () => {
+    ai.transcribe.mockResolvedValue({ text: " fix the colour grade ", segments: [] });
+    const r = await voice(as("editor"));
+    expect(r.body.comment.transcriptStatus).toBe("pending");
+    expect(r.body.comment.transcript).toBeUndefined();
+    await settle();
+    expect(await list("owner")).toMatchObject([{ transcript: "fix the colour grade", transcriptStatus: "ready" }]);
+  });
+  it("transcription failure keeps the note and marks it failed", async () => {
+    ai.transcribe.mockRejectedValue(new Error("rate limited"));
+    expect((await voice(as("editor"))).status).toBe(201);
+    await settle();
+    const [c] = await list("owner");
+    expect(c).toMatchObject({ transcriptStatus: "failed", audioUrl: expect.any(String) });
+    expect(c.transcript).toBeUndefined();
+  });
+  it("skips transcription when no transcriber is configured", async () => {
+    for (const k of ["GROQ_API_KEY", "OPENAI_API_KEY", "GEMINI_API_KEY"]) delete process.env[k];
+    const r = await voice(as("editor"));
+    expect(r.body.comment.transcriptStatus).toBe("none");
+    expect(ai.transcribe).not.toHaveBeenCalled();
+  });
+  it("stops transcribing after the hourly cap but keeps the notes", async () => {
+    ai.transcribe.mockResolvedValue({ text: "x", segments: [] });
+    await m.Project.updateOne({ _id: pid }, { editors: ["capped"] });
+    const statuses: string[] = [];
+    for (let i = 0; i < 32; i++) statuses.push((await voice(as("capped"))).body.comment.transcriptStatus);
+    expect(statuses.filter((s) => s === "pending")).toHaveLength(30);
+  });
+  it("owner's draft transcript stays hidden from the editor until sent", async () => {
+    ai.transcribe.mockResolvedValue({ text: "secret", segments: [] });
+    await voice(as("owner"));
+    await settle();
+    expect(JSON.stringify(await list("editor"))).not.toContain("secret");
+    expect((await list("owner"))[0].transcript).toBe("secret");
   });
 });
 
