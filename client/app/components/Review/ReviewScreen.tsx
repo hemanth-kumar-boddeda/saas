@@ -11,14 +11,14 @@ import {
 } from "../../../redux/features/review/reviewApi";
 
 const STATUS: Record<string, { label: string; cls: string }> = {
-  in_review: { label: "In review", cls: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200" },
-  changes_requested: { label: "Changes requested", cls: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200" },
-  approved: { label: "Approved", cls: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200" },
-  published: { label: "Published", cls: "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-200" },
+  in_review: { label: "In review", cls: "bg-blue-500/10 text-blue-300 border-blue-500/30" },
+  changes_requested: { label: "Changes requested", cls: "bg-amber-500/10 text-amber-300 border-amber-500/30" },
+  approved: { label: "Approved", cls: "bg-green-500/10 text-green-300 border-green-500/30" },
+  published: { label: "Published", cls: "bg-violet-500/10 text-violet-300 border-violet-500/30" },
 };
 export const StatusBadge = ({ status }: { status: string }) => {
   const s = STATUS[status] || STATUS.in_review;
-  return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${s.cls}`}>{s.label}</span>;
+  return <span className={`cf-badge ${s.cls}`}>{s.label}</span>;
 };
 
 export const fmt = (t: number) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
@@ -27,14 +27,14 @@ const parseTime = (s: string) => {
   const v = Number(m) * 60 + Number(sec);
   return Number.isFinite(v) && v >= 0 ? v : NaN;
 };
-const card = "rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4";
-const btn = "px-3 py-1.5 rounded-md text-sm font-medium disabled:opacity-50";
-const btnPrimary = `${btn} bg-indigo-600 text-white hover:bg-indigo-700`;
-const btnGhost = `${btn} border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-100`;
-const input = "w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm";
+const card = "cf-glass p-4";
+const btn = "cf-btn text-sm";
+const btnPrimary = `${btn} cf-btn-primary`;
+const btnGhost = `${btn} cf-btn-secondary`;
+const input = "cf-input";
 
 const Notice = () => (
-  <p className="text-xs text-gray-500 dark:text-gray-400">
+  <p className="text-xs text-cf-muted">
     Preview-only streaming deters casual downloading. It cannot stop screen recording.
   </p>
 );
@@ -60,11 +60,17 @@ export default function ReviewScreen({ projectId, guest }: { projectId: string; 
   );
   const stream = useStreamUrlQuery({ id: projectId, vid: vid! }, { skip: !vid || version?.processing !== "ready" });
 
-  if (isLoading) return <div className="p-8 text-gray-600 dark:text-gray-300">Loading project…</div>;
+  if (isLoading)
+    return (
+      <div className="mx-auto max-w-7xl p-6" aria-busy="true" aria-label="Loading project">
+        <div className="cf-skeleton mb-4 h-9 w-64" />
+        <div className="grid gap-4 lg:grid-cols-[1fr_380px]"><div className="cf-skeleton aspect-video" /><div className="cf-skeleton h-96" /></div>
+      </div>
+    );
   if (error || !project)
     return (
-      <div className="p-8">
-        <p className="text-red-600 dark:text-red-400">{errMsg(error) || "Project not found."}</p>
+      <div className="p-8" role="alert">
+        <p className="text-red-300">{errMsg(error) || "Project not found."}</p>
         {!guest && <Link href="/projects" className="underline text-sm">Back to projects</Link>}
       </div>
     );
@@ -74,10 +80,10 @@ export default function ReviewScreen({ projectId, guest }: { projectId: string; 
   const duration: number = version?.duration || 0;
 
   return (
-    <div className="mx-auto max-w-7xl p-4 sm:p-6 text-gray-900 dark:text-gray-100">
+    <div className="cf-rise mx-auto max-w-7xl p-4 sm:p-6 text-cf-text">
       <header className="flex flex-wrap items-center gap-3 mb-4">
         {!guest && <Link href="/projects" className="text-sm underline">← Projects</Link>}
-        <h1 className="text-xl font-semibold">{project.title}</h1>
+        <h1 className="cf-hero-gradient text-2xl font-semibold tracking-tight sm:text-3xl">{project.title}</h1>
         <StatusBadge status={project.status} />
         <select
           aria-label="Version"
@@ -96,38 +102,38 @@ export default function ReviewScreen({ projectId, guest }: { projectId: string; 
       {!version ? (
         <div className={`${card} text-center`}>
           <p className="mb-2">No video yet.</p>
-          {role !== "guest" && <p className="text-sm text-gray-500">Upload the first version below.</p>}
+          {role !== "guest" && <p className="text-sm text-cf-muted">Upload the first version below.</p>}
         </div>
       ) : (
         <div className="grid gap-4 lg:grid-cols-[1fr_380px]">
           <section>
             {version.processing === "pending" && <div className={card}>Processing video… this page updates when you reload.</div>}
-            {version.processing === "failed" && <div className={`${card} text-red-600`}>Processing failed. Upload this version again.</div>}
+            {version.processing === "failed" && <div className={`${card} text-red-300`}>Processing failed. Upload this version again.</div>}
             {version.kind === "link" && (
               <div className={card}>
                 <a className="underline break-all" href={version.externalUrl} target="_blank" rel="noreferrer noopener">{version.externalUrl}</a>
-                <p className="text-xs text-gray-500 mt-1">External link: open it in a new tab and enter timecodes by hand.</p>
+                <p className="text-xs text-cf-muted mt-1">External link: open it in a new tab and enter timecodes by hand.</p>
               </div>
             )}
             {stream.isFetching && <div className={card}>Loading player…</div>}
             {stream.data?.kind === "hls" && <Player ref={player} src={stream.data.url} onTime={setNow} />}
-            {stream.isError && <p className="text-red-600 text-sm">{errMsg(stream.error)}</p>}
+            {stream.isError && <p className="text-red-300 text-sm">{errMsg(stream.error)}</p>}
 
             {duration > 0 && (
-              <div className="relative h-6 mt-2 rounded bg-gray-200 dark:bg-gray-700" aria-label="Comment timeline">
+              <div className="relative h-6 mt-2 rounded bg-white/10" aria-label="Comment timeline">
                 {roots.map((c) => (
                   <button
                     key={c._id}
                     title={`${fmt(c.timecode)} ${c.body}`}
                     onClick={() => player.current?.seek(c.timecode)}
                     style={{ left: `${Math.min(100, (c.timecode / duration) * 100)}%` }}
-                    className={`absolute top-0 h-6 w-2 -ml-1 rounded ${c.status === "resolved" ? "bg-green-500" : "bg-amber-500"}`}
+                    className={`absolute top-0 h-6 w-2 -ml-1 rounded ${c.status === "resolved" ? "bg-green-400" : "bg-amber-400"}`}
                   />
                 ))}
               </div>
             )}
             <div className="mt-2"><Notice /></div>
-            {!isLatest && <p className="mt-2 text-sm text-amber-600 dark:text-amber-300">You are viewing an older version. Comments here belong to this version only.</p>}
+            {!isLatest && <p className="mt-2 text-sm text-amber-300">You are viewing an older version. Comments here belong to this version only.</p>}
           </section>
 
           <aside className={`${card} flex flex-col max-h-[80vh]`}>
@@ -142,8 +148,8 @@ export default function ReviewScreen({ projectId, guest }: { projectId: string; 
               </label>
             </div>
             <div className="overflow-y-auto flex-1 space-y-3">
-              {loadingComments && <p className="text-sm text-gray-500">Loading comments…</p>}
-              {!loadingComments && roots.length === 0 && <p className="text-sm text-gray-500">No comments yet. Pause the video and add the first one.</p>}
+              {loadingComments && <p className="text-sm text-cf-muted">Loading comments…</p>}
+              {!loadingComments && roots.length === 0 && <p className="text-sm text-cf-muted">No comments yet. Pause the video and add the first one.</p>}
               {roots.map((c) => (
                 <Thread key={c._id} c={c} replies={comments.filter((r) => r.parentId === c._id)} projectId={projectId} vid={vid} role={role} seek={(t: number) => player.current?.seek(t)} />
               ))}
@@ -175,16 +181,16 @@ function Thread({ c, replies, projectId, vid, role, seek }: any) {
   const [setStatus] = useSetCommentStatusMutation();
   const canResolve = role === "owner" || role === "editor";
   return (
-    <div className={`rounded-md border p-2 ${c.status === "resolved" ? "opacity-70 border-green-300 dark:border-green-800" : "border-gray-200 dark:border-gray-700"}`}>
-      <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+    <div className={`rounded-xl border p-3 bg-black/20 ${c.status === "resolved" ? "opacity-70 border-green-500/40" : "border-cf-line"}`}>
+      <div className="flex items-center gap-2 text-xs text-cf-muted">
         <button className="font-mono underline" onClick={() => seek(c.timecode)}>{fmt(c.timecode)}</button>
         <span>{c.authorName}</span>
-        {c.status === "resolved" && <span className="text-green-600 dark:text-green-400">resolved</span>}
+        {c.status === "resolved" && <span className="text-green-300">resolved</span>}
       </div>
       <p className="text-sm whitespace-pre-wrap break-words">{c.body}</p>
       {replies.map((r: any) => (
-        <p key={r._id} className="text-sm ml-3 mt-1 pl-2 border-l border-gray-300 dark:border-gray-600">
-          <span className="text-xs text-gray-500">{r.authorName}: </span>{r.body}
+        <p key={r._id} className="text-sm ml-3 mt-1 pl-2 border-l border-cf-line">
+          <span className="text-xs text-cf-muted">{r.authorName}: </span>{r.body}
         </p>
       ))}
       <div className="flex gap-3 mt-1 text-xs">
@@ -237,7 +243,7 @@ function NewComment({ projectId, vid, now, manual, duration }: any) {
         ) : (
           <span className="font-mono">@ {fmt(now)}</span>
         )}
-        {duration > 0 && <span className="text-gray-500">of {fmt(duration)}</span>}
+        {duration > 0 && <span className="text-cf-muted">of {fmt(duration)}</span>}
       </div>
       <textarea className={input} rows={2} maxLength={2000} value={body} onChange={(e) => setBody(e.target.value)} placeholder="Comment at this moment" />
       <button className={btnPrimary} disabled={isLoading || !body.trim()}>Add comment</button>
@@ -271,7 +277,7 @@ function UploadVersion({ projectId }: { projectId: string }) {
     <form onSubmit={submit} className={card}>
       <h2 className="font-semibold mb-2">Upload a new version</h2>
       <input ref={file} type="file" accept="video/*,.mkv" className="text-sm mb-2" />
-      <p className="text-xs text-gray-500 mb-2">or paste an unlisted https link</p>
+      <p className="text-xs text-cf-muted mb-2">or paste an unlisted https link</p>
       <input className={`${input} mb-2`} value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://youtu.be/…" />
       <input className={`${input} mb-2`} value={note} onChange={(e) => setNote(e.target.value)} placeholder="What changed? (optional)" maxLength={500} />
       <button className={btnPrimary} disabled={isLoading}>{isLoading ? "Uploading…" : "Add version"}</button>
@@ -297,7 +303,7 @@ function ApprovalBox({ projectId, vid, status }: any) {
       {done ? <p className="text-sm">This version is {status}.</p> : <button className={btnPrimary} onClick={() => setOpen(true)}>Review decision…</button>}
       {open && (
         <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-lg bg-white dark:bg-gray-900 p-5 text-gray-900 dark:text-gray-100">
+          <div className="w-full max-w-md rounded-lg cf-glass p-5 text-cf-text">
             <h3 className="font-semibold mb-2">Decide on this version</h3>
             <textarea className={`${input} mb-3`} rows={3} maxLength={1000} placeholder="Note (optional)" value={note} onChange={(e) => setNote(e.target.value)} />
             <div className="flex gap-2 justify-end">
@@ -352,7 +358,7 @@ function ShareLinks({ projectId }: { projectId: string }) {
             {!l.revoked && <button className="underline" onClick={() => revoke({ id: projectId, lid: l._id })}>Revoke</button>}
           </li>
         ))}
-        {data?.links?.length === 0 && <li className="text-gray-500">No links yet.</li>}
+        {data?.links?.length === 0 && <li className="text-cf-muted">No links yet.</li>}
       </ul>
     </div>
   );
@@ -364,7 +370,7 @@ function ApprovalLog({ projectId }: { projectId: string }) {
   return (
     <div className={card}>
       <h2 className="font-semibold mb-2">Approval log</h2>
-      {isLoading ? <p className="text-sm text-gray-500">Loading…</p> : rows.length === 0 ? <p className="text-sm text-gray-500">No decisions yet.</p> : (
+      {isLoading ? <p className="text-sm text-cf-muted">Loading…</p> : rows.length === 0 ? <p className="text-sm text-cf-muted">No decisions yet.</p> : (
         <ul className="text-sm space-y-1">
           {rows.map((r) => (
             <li key={r._id}>

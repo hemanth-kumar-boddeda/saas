@@ -18,7 +18,7 @@ const schema = Yup.object().shape({
     password: Yup.string().required("Please enter your password").min(6),
 });
 
-const Login: FC<Props> = ({ setRoute,setOpen, title = "Login with VidTouch" }) => {
+const Login: FC<Props> = ({ setRoute,setOpen, title = "Sign in to CreatorFlow" }) => {
     const [show, setShow] = useState(false);
     const [login,{isSuccess,error}] = useLoginMutation();
     const formik = useFormik({

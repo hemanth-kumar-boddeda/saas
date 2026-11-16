@@ -1,10 +1,10 @@
 "use client";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import ReviewScreen from "../../components/Review/ReviewScreen";
 import { errMsg, useEnterLinkMutation } from "../../../redux/features/review/reviewApi";
 
-const field = "w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm";
+const field = "cf-input";
 
 export default function GuestPage() {
   const token = String(useParams()?.token ?? "");
@@ -25,11 +25,17 @@ export default function GuestPage() {
     } catch {}
   }, [token]);
 
-  if (projectId) return <ReviewScreen projectId={projectId} guest />;
+  const Shell = ({ children }: { children: React.ReactNode }) => (
+    <div className="dark cf-root relative min-h-screen bg-cf-bg font-cf text-cf-text">
+      <div className="cf-aurora" aria-hidden="true" />
+      <div className="relative z-10">{children}</div>
+    </div>
+  );
+  if (projectId) return <Shell><ReviewScreen projectId={projectId} guest /></Shell>;
   return (
-    <main className="min-h-screen flex items-center justify-center p-4 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100">
+    <Shell><main className="flex min-h-screen items-center justify-center p-4">
       <form
-        className="w-full max-w-sm space-y-3"
+        className="cf-glass cf-rise w-full max-w-sm space-y-3 p-6"
         onSubmit={async (e) => {
           e.preventDefault();
           setError("");
@@ -41,13 +47,14 @@ export default function GuestPage() {
           } catch (er) { setError(errMsg(er)); }
         }}
       >
-        <h1 className="text-xl font-semibold">Review a video</h1>
-        <p className="text-sm text-gray-500">No account needed. Your name appears on your comments.</p>
+        <span className="cf-chip">Guest review</span>
+        <h1 className="cf-hero-gradient text-2xl font-semibold">Review a video</h1>
+        <p className="text-sm text-cf-muted">No account needed. Your name appears on your comments.</p>
         <input className={field} placeholder="Your name" maxLength={60} value={name} onChange={(e) => setName(e.target.value)} required />
         <input className={field} type="password" placeholder="Password (if the owner set one)" value={password} onChange={(e) => setPassword(e.target.value)} />
-        {error && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{error}</p>}
-        <button className="w-full px-3 py-2 rounded-md bg-indigo-600 text-white text-sm disabled:opacity-50" disabled={isLoading || !name.trim()}>Open review</button>
+        {error && <p role="alert" className="text-sm text-red-300">{error}</p>}
+        <button className="cf-btn cf-btn-primary w-full text-sm" disabled={isLoading || !name.trim()}>Open review</button>
       </form>
-    </main>
+    </main></Shell>
   );
 }

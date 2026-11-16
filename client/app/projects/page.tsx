@@ -11,10 +11,16 @@ export default function Projects() {
   const [title, setTitle] = useState("");
   const projects: any[] = data?.projects || [];
   return (
-    <main className="mx-auto max-w-4xl p-4 sm:p-6 text-gray-900 dark:text-gray-100">
-      <h1 className="text-2xl font-semibold mb-4">Projects</h1>
+    <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
+      <div className="cf-rise">
+        <span className="cf-chip">Workspace</span>
+        <h1 className="cf-hero-gradient mt-3 text-4xl font-semibold tracking-tight sm:text-5xl">Your projects</h1>
+        <p className="mt-2 max-w-xl text-cf-muted">Upload a cut, collect timestamped feedback, approve, then publish with an AI-written kit.</p>
+      </div>
+
       <form
-        className="flex gap-2 mb-6"
+        className="cf-glass cf-rise mt-8 flex flex-col gap-2 p-3 sm:flex-row"
+        style={{ "--i": 1 } as React.CSSProperties}
         onSubmit={async (e) => {
           e.preventDefault();
           try {
@@ -23,21 +29,37 @@ export default function Projects() {
           } catch (er) { toast.error(errMsg(er)); }
         }}
       >
-        <input
-          className="flex-1 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm"
-          placeholder="New project title" maxLength={120} value={title} onChange={(e) => setTitle(e.target.value)}
-        />
-        <button className="px-3 py-2 rounded-md bg-indigo-600 text-white text-sm disabled:opacity-50" disabled={creating || !title.trim()}>Create</button>
+        <label htmlFor="new-project" className="sr-only">New project title</label>
+        <input id="new-project" className="cf-input flex-1" placeholder="New project title, e.g. Episode 12 final cut" maxLength={120} value={title} onChange={(e) => setTitle(e.target.value)} />
+        <button className="cf-btn cf-btn-primary px-5" disabled={creating || !title.trim()}>{creating ? "Creating…" : "Create project"}</button>
       </form>
-      {isLoading && <p className="text-gray-500">Loading projects…</p>}
-      {error && <p className="text-red-600">{errMsg(error)} Are you logged in?</p>}
-      {!isLoading && !error && projects.length === 0 && <p className="text-gray-500">No projects yet. Create one to start a review.</p>}
-      <ul className="space-y-2">
-        {projects.map((p) => (
-          <li key={p._id}>
-            <Link href={`/projects/${p._id}`} className="flex items-center justify-between rounded-lg border border-gray-200 dark:border-gray-700 p-3 hover:bg-gray-50 dark:hover:bg-gray-800">
-              <span>{p.title} <span className="text-xs text-gray-500">({p.role}, v{p.currentVersion})</span></span>
-              <StatusBadge status={p.status} />
+
+      {isLoading && (
+        <div className="mt-8 grid gap-4 sm:grid-cols-2" aria-busy="true" aria-label="Loading projects">
+          {[0, 1, 2, 3].map((i) => <div key={i} className="cf-skeleton h-28" />)}
+        </div>
+      )}
+      {error && (
+        <div role="alert" className="cf-card mt-8 p-5">
+          <p className="text-red-300">{errMsg(error)}</p>
+          <Link href="/login" className="cf-btn cf-btn-secondary mt-3 text-sm">Sign in again</Link>
+        </div>
+      )}
+      {!isLoading && !error && projects.length === 0 && (
+        <div className="cf-card mt-8 p-10 text-center">
+          <p className="text-lg font-medium">No projects yet</p>
+          <p className="mt-1 text-cf-muted">Create your first project above, then upload a video or paste an unlisted link.</p>
+        </div>
+      )}
+      <ul className="mt-8 grid gap-4 sm:grid-cols-2">
+        {projects.map((p, i) => (
+          <li key={p._id} className="cf-rise" style={{ "--i": i + 2 } as React.CSSProperties}>
+            <Link href={`/projects/${p._id}`} className="cf-glass cf-card-hover block p-5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cf-violet">
+              <div className="flex items-start justify-between gap-3">
+                <h2 className="text-lg font-semibold leading-snug">{p.title}</h2>
+                <StatusBadge status={p.status} />
+              </div>
+              <p className="mt-3 text-sm text-cf-muted capitalize">{p.role} · version {p.currentVersion || "—"}</p>
             </Link>
           </li>
         ))}

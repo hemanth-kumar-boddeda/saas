@@ -9,7 +9,7 @@ const PRODUCT_LINKS = [
 ];
 
 const COMPANY_LINKS = [
-  { label: "Marketplace", href: "/marketplace" },
+  { label: "About", href: "/about" },
   { label: "Privacy", href: "/privacy" },
   { label: "Terms", href: "/policy" },
 ];

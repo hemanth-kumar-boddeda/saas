@@ -10,12 +10,12 @@ import { Providers } from "./Provider";
 import { useLoadUserQuery } from "./../redux/features/api/apiSlice";
 import { initializeApp } from "./../redux/store";
 import Loader from "./components/Loader/Loader";
-import MainLayout from "./layouts/MainLayout";
+import AppShell from "./components/AppShell";
 import { usePathname } from "next/navigation";
 import { GeistSans } from "geist/font/sans";
 
 // Marketing and guest review pages are public: no app shell, no session probe.
-const MARKETING_ROUTES = ["/", "/login", "/signup", "/privacy"];
+const MARKETING_ROUTES = ["/", "/login", "/signup", "/privacy", "/about", "/policy"];
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -45,7 +45,7 @@ export default function RootLayout({ children }: { children: React.ReactNode; })
                 <>{children}</>
               ) : (
                 <Custom>
-                  <MainLayout>{children}</MainLayout>
+                  <AppShell>{children}</AppShell>
                 </Custom>
               )}
               <ToastContainer

@@ -7,11 +7,11 @@ import {
 } from "../../../redux/features/review/reviewApi";
 import Publish from "./Publish";
 
-const card = "rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4";
-const btn = "px-3 py-1.5 rounded-md text-sm font-medium disabled:opacity-50";
-const primary = `${btn} bg-indigo-600 text-white hover:bg-indigo-700`;
-const ghost = `${btn} border border-gray-300 dark:border-gray-600`;
-const input = "w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm";
+const card = "cf-glass p-5";
+const btn = "cf-btn text-sm";
+const primary = `${btn} cf-btn-primary`;
+const ghost = `${btn} cf-btn-secondary`;
+const input = "cf-input";
 const STEPS: Record<string, string> = {
   queued: "Waiting in queue", transcribing: "Transcribing audio", ranking_frames: "Picking the best frames",
   writing_copy: "Writing titles, description and chapters", building_thumbnails: "Building thumbnails",
@@ -103,18 +103,18 @@ export default function PublishKit({ projectId, role, channel }: { projectId: st
   return (
     <section className={`${card} mt-6`} aria-label="AI publish kit">
       <h2 className="text-lg font-semibold">Publish kit</h2>
-      <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+      <p className="text-xs text-cf-muted mb-3">
         AI-generated suggestions from your transcript and video frames. Review and edit everything. No title or thumbnail can promise views or virality.
       </p>
       <ChannelBox projectId={projectId} channel={channel} owner={owner} />
       {isLoading && <p>Loading…</p>}
       {!kit && !isLoading && (owner
         ? <button className={primary} disabled={starting} onClick={go}>Generate publish kit</button>
-        : <p className="text-sm text-gray-500">The owner can generate the kit.</p>)}
+        : <p className="text-sm text-cf-muted">The owner can generate the kit.</p>)}
       {busy && <p role="status">{STEPS[kit.step] || "Working"}…</p>}
       {kit?.status === "failed" && (
         <div>
-          <p className="text-red-600 text-sm mb-2">{kit.error || "Generation failed."}</p>
+          <p className="text-red-300 text-sm mb-2">{kit.error || "Generation failed."}</p>
           {owner && <button className={primary} disabled={starting} onClick={go}>Try again</button>}
         </div>
       )}
@@ -124,7 +124,7 @@ export default function PublishKit({ projectId, role, channel }: { projectId: st
             <h3 className="font-medium mb-1">Thumbnails</h3>
             <div className="grid gap-3 sm:grid-cols-3">
               {kit.thumbnails.map((t: any, i: number) => (
-                <label key={i} className={`block rounded-md border p-1 ${draft.chosenThumbnail === i ? "border-indigo-600" : "border-gray-300 dark:border-gray-600"}`}>
+                <label key={i} className={`block rounded-xl border p-1.5 bg-black/20 ${draft.chosenThumbnail === i ? "border-cf-violet" : "border-cf-line"}`}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={absolute(t.url)} alt={`${t.label}: ${t.text}`} className="w-full rounded" />
                   <span className="flex items-center gap-2 text-xs mt-1">

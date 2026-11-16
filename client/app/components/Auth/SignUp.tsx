@@ -20,7 +20,7 @@ const schema = Yup.object().shape({
     password: Yup.string().required("Please enter your password").min(6),
 });
 
-const SignUp: FC<Props> = ({ setRoute, setOpen, title = "Join to VidTouch" }) => {
+const SignUp: FC<Props> = ({ setRoute, setOpen, title = "Create your CreatorFlow account" }) => {
     const [show, setShow] = useState(false);
     const [isRegistered, setIsRegistered] = useState(false);
     const [register, { data, error, isSuccess }] = useRegisterMutation();

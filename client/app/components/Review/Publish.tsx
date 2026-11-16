@@ -5,10 +5,10 @@ import {
   errMsg, useConnectAccountMutation, useDisconnectAccountMutation, useListAccountsQuery, useListPublicationsQuery, usePublishMutation,
 } from "../../../redux/features/review/reviewApi";
 
-const btn = "px-3 py-1.5 rounded-md text-sm font-medium disabled:opacity-50";
-const primary = `${btn} bg-indigo-600 text-white hover:bg-indigo-700`;
-const ghost = `${btn} border border-gray-300 dark:border-gray-600`;
-const input = "rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm";
+const btn = "cf-btn text-sm";
+const primary = `${btn} cf-btn-primary`;
+const ghost = `${btn} cf-btn-secondary`;
+const input = "cf-input";
 const NAMES: Record<string, string> = { youtube: "YouTube", instagram: "Instagram" };
 
 export default function Publish({ projectId }: { projectId: string }) {
@@ -41,9 +41,9 @@ export default function Publish({ projectId }: { projectId: string }) {
   };
 
   return (
-    <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+    <div className="border-t border-cf-line pt-4">
       <h3 className="font-medium mb-1">Publish</h3>
-      <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+      <p className="text-xs text-cf-muted mb-2">
         Publishes exactly what is saved above. Instagram needs a professional account linked to a Facebook Page (Meta test mode: testers only).
         Publishing sends the original video to the platform. Results are not guaranteed.
       </p>
@@ -70,7 +70,7 @@ export default function Publish({ projectId }: { projectId: string }) {
           <li key={p._id}>
             {NAMES[p.provider]} · {p.status}{p.scheduledAt ? ` for ${new Date(p.scheduledAt).toLocaleString()}` : ""}
             {p.url && <> · <a className="underline" href={p.url} target="_blank" rel="noreferrer noopener">open</a></>}
-            {p.error && <span className="text-red-600"> · {p.error}</span>}
+            {p.error && <span className="text-red-300"> · {p.error}</span>}
           </li>
         ))}
       </ul>

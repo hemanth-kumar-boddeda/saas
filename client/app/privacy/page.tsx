@@ -1,68 +1,30 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import LegalPage, { Section } from "../components/legal/LegalPage";
 
 export const metadata: Metadata = {
-  title: "Privacy, CreatorFlow",
-  description:
-    "What CreatorFlow stores about an account, what it stores about a project, and how a session is kept.",
+  title: "Privacy - CreatorFlow",
+  description: "What CreatorFlow stores, which providers process it, and how sessions and connected accounts are handled.",
 };
 
-const SECTIONS = [
-  {
-    title: "Account data",
-    body: "An account keeps your name, your email address and a hashed password. When you sign in with Google, the provider verified email address and the provider identifier for that account are stored so the next sign in can be recognised.",
-  },
-  {
-    title: "Session data",
-    body: "Signing in sets a session that the server stores with a session identifier, the account it belongs to and the expiry of that session. The browser holds the session token in a cookie that is not readable from scripts.",
-  },
-  {
-    title: "Verification email",
-    body: "Creating an account sends a four digit code to the address on that account. The code is used to confirm the address and it expires after a few minutes.",
-  },
-  {
-    title: "Project data",
-    body: "Files that you upload are stored in the media storage of the platform and are attached to the project they belong to. Private file links are not published anywhere and are only given to the people on the project.",
-  },
-  {
-    title: "Payments",
-    body: "Payments for marketplace purchases are handled by the payment provider. The platform receives the result of the payment and the order it belongs to. Card numbers are never stored here.",
-  },
-  {
-    title: "What is not done with your data",
-    body: "Your uploads and your account data are not sold. No third party advertising profile is built from a CreatorFlow account.",
-  },
-];
-
+// ponytail: plain-language draft. Have counsel review before launch.
 export default function PrivacyPage() {
   return (
-    <div className="cf-root min-h-screen bg-cf-bg font-cf text-cf-text">
-      <main className="mx-auto max-w-3xl px-4 py-24 md:px-8 md:py-32">
-        <Link href="/" className="caption-2 text-cf-muted transition-colors duration-300 hover:text-cf-text">
-          Back to CreatorFlow
-        </Link>
-
-        <h1 className="heading-3 mt-6 text-cf-text">Privacy</h1>
-        <p className="body-2 mt-4 text-cf-muted">
-          This page describes what the current build of CreatorFlow stores and why.
-          It covers the accounts, the marketplace and the parts of the workspace that
-          are in development.
-        </p>
-
-        <div className="mt-12 flex flex-col gap-10">
-          {SECTIONS.map((section) => (
-            <section key={section.title}>
-              <h2 className="title-2 text-cf-text">{section.title}</h2>
-              <p className="body-3 mt-2 text-cf-muted">{section.body}</p>
-            </section>
-          ))}
-        </div>
-
-        <p className="caption-3 mt-12 text-cf-muted">
-          This page covers the build that is running now. It is updated when the
-          workspace features ship.
-        </p>
-      </main>
-    </div>
+    <LegalPage chip="Privacy" title="Privacy" intro="What the current build of CreatorFlow stores and which providers see it.">
+      <Section title="Account and session">
+        <p>An account keeps your name, email and a hashed password, or the verified email and identifier from Google sign-in. Signing in sets a session cookie that scripts cannot read. A four digit code confirms new email addresses and expires after a few minutes.</p>
+      </Section>
+      <Section title="Videos, comments and review links">
+        <p>Uploaded videos are stored on the server, transcoded for streaming and attached to their project. Comments are stored with the name of the commenter. Guests need no account; a guest&apos;s name is stored on their comments. Revoke a link at any time.</p>
+      </Section>
+      <Section title="AI processing">
+        <p>When the owner generates a publish kit, the audio goes to OpenAI for transcription, and the transcript plus sampled video frames go to Anthropic to rank thumbnails and write copy. Your channel profile is included in those requests. Nothing is generated until the owner asks.</p>
+      </Section>
+      <Section title="Connected accounts and publishing">
+        <p>YouTube and Instagram access tokens are stored encrypted and never shown in the app. Publishing sends the original video, your edited text and the chosen thumbnail to that platform. For Instagram, a short-lived signed link lets Meta fetch the video. Disconnect an account to delete its tokens.</p>
+      </Section>
+      <Section title="What we do not do">
+        <p>Your uploads and account data are not sold, and no advertising profile is built from them.</p>
+      </Section>
+    </LegalPage>
   );
 }

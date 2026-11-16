@@ -47,7 +47,7 @@ const Player = forwardRef<PlayerHandle, { src: string; onTime?: (t: number) => v
       disablePictureInPicture
       onContextMenu={(e) => e.preventDefault()}
       onTimeUpdate={(e) => onTime?.(e.currentTarget.currentTime)}
-      className="w-full rounded-lg bg-black aspect-video"
+      className="w-full rounded-2xl bg-black aspect-video ring-1 ring-white/10 shadow-2xl shadow-black/60"
     />
   );
 });

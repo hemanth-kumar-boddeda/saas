@@ -1,26 +1,24 @@
-"use client";
-import React, { useState } from "react";
-import Heading from "../utils/Heading";
-import Navbar from "../components/Navbar/Navbar";
-import Footer from "../components/Footer/Footer";
-import Policy from "./Policy";
+import type { Metadata } from "next";
+import LegalPage, { Section } from "../components/legal/LegalPage";
 
-type Props = {};
+export const metadata: Metadata = { title: "Terms - CreatorFlow", description: "Terms of use for CreatorFlow." };
 
-const Page = (props: Props) => {
+// ponytail: plain-language draft. Have counsel review before launch.
+export default function Terms() {
   return (
-    <div>
-      <Heading
-        title="Policy - VIDTOUCH"
-        description={
-          "VIDTOUCH is an online editing marketplace with over 213000 videos and 62 million editors. Learn editing, marketing, and more."
-        }
-        keywords="editing community, editing skills, expert insights"
-      />
-      <Policy />
-      <Footer />
-    </div>
+    <LegalPage chip="Terms" title="Terms of use" intro="Plain-language terms for using CreatorFlow. This draft needs legal review before public launch.">
+      <Section title="Your content">
+        <p>You own the videos and text you upload. You give CreatorFlow permission to store, transcode, stream and process them to provide the service, including sending audio to a transcription provider and transcript and frames to an AI provider to build your publish kit.</p>
+      </Section>
+      <Section title="Sharing and guests">
+        <p>Anyone with a review link can view and comment until the link expires or you revoke it. Preview streaming deters casual downloading but cannot prevent screen recording. Only share with people you trust.</p>
+      </Section>
+      <Section title="Connected accounts">
+        <p>When you connect YouTube or Instagram you authorize CreatorFlow to publish on your behalf. Tokens are stored encrypted and you can disconnect at any time. You are responsible for what you publish and for following each platform&apos;s rules.</p>
+      </Section>
+      <Section title="AI output">
+        <p>AI suggestions may be wrong or unsuitable. Review and edit them before publishing. No result, view count or ranking is guaranteed.</p>
+      </Section>
+    </LegalPage>
   );
-};
-
-export default Page;
+}
