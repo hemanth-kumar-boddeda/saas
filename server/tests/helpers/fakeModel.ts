@@ -30,14 +30,21 @@ export const createFakeModel = (defaults: Record<string, any> = {}) => {
       rows.push(row);
       return wrap(row);
     },
+    updateMany: async (q: any, upd: any) => {
+      const hit = rows.filter((r) => matches(r, q));
+      hit.forEach((r) => Object.assign(r, upd));
+      return { matchedCount: hit.length };
+    },
     find: (q?: any) => chain(rows.filter((r) => matches(r, q))),
     findOne: async (q: any) => wrap(rows.find((r) => matches(r, q)) ?? null),
     findById: async (id: any) => wrap(rows.find((r) => same(r._id, id)) ?? null),
     updateOne: async (q: any, upd: any) => {
       const row = rows.find((r) => matches(r, q));
       if (!row) return { matchedCount: 0 };
-      const { $addToSet, ...set } = upd;
+      const { $addToSet, $push, $pull, ...set } = upd;
       Object.assign(row, set);
+      for (const [k, v] of Object.entries($push ?? {})) row[k] = [...(row[k] ?? []), { _id: (++n).toString(16).padStart(24, "b"), ...(v as any) }];
+      for (const [k, v] of Object.entries($pull ?? {})) row[k] = (row[k] ?? []).filter((x: any) => !Object.entries(v as any).every(([f, val]) => same(x[f], val)));
       for (const [k, v] of Object.entries($addToSet ?? {})) {
         row[k] = row[k] ?? [];
         if (!row[k].some((x: any) => same(x, v))) row[k].push(v);

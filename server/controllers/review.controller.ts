@@ -14,7 +14,8 @@ import {
   validateNewComment, ApprovalAction,
 } from "../services/reviewLogic";
 import { hashToken, newLinkToken, signGuestToken, signStreamToken, verifyStreamToken } from "../utils/reviewTokens";
-import { notifyProject } from "../utils/notify";
+import { notifyProject, mailLink, reviewLinkUrl } from "../utils/notify";
+import { decrypt, encrypt } from "../services/publishLogic";
 import { probeDuration, toHls } from "../utils/transcode";
 import { resolveKey, versionDir, storageRoot } from "../utils/storage";
 import { logger } from "../utils/logger";
@@ -32,10 +33,13 @@ export const parse = <T extends z.ZodTypeAny>(schema: T, data: unknown): z.infer
 const projectJson = (p: any, role: string) => ({
   _id: p._id, title: p.title, status: p.status, currentVersion: p.currentVersion, owner: p.owner,
   editors: p.editors, createdAt: p.createdAt, role, channel: p.channel,
+  brief: p.brief ?? "",
+  references: (p.references ?? []).map((r: any) => ({ _id: r._id, kind: r.kind, title: r.title, url: r.url, processing: r.processing })),
+  editorInvites: role === "owner" ? (p.editorInvites ?? []).map((i: any) => ({ email: i.email, invitedAt: i.invitedAt })) : undefined,
 });
 const versionJson = (v: any) => ({
   _id: v._id, number: v.number, kind: v.kind, processing: v.processing, duration: v.duration,
-  externalUrl: v.externalUrl, note: v.note, createdAt: v.createdAt, uploadedBy: v.uploadedBy,
+  externalUrl: v.externalUrl, note: v.note, createdAt: v.createdAt, uploadedBy: v.uploadedBy, uploadedByName: v.uploadedByName,
 });
 const getVersion = async (projectId: string, versionId: string) => {
   const v: any = mongoose.isValidObjectId(versionId) ? await ProjectVersion.findOne({ _id: versionId, project: projectId }) : null;
@@ -89,7 +93,7 @@ export const addVersion = CatchAsyncError(async (req: Request, res: Response) =>
     const number = nextVersionNumber(existing.map((v) => v.number));
     const version: any = await ProjectVersion.create({
       project: project._id, number, kind: file ? "upload" : "link", externalUrl: file ? undefined : body.externalUrl,
-      processing: file ? "pending" : "ready", uploadedBy: a.userId, note: body.note,
+      processing: file ? "pending" : "ready", uploadedBy: a.userId, uploadedByName: a.userId ? undefined : a.name, note: body.note,
     });
     await Project.updateOne({ _id: project._id }, { status, currentVersion: number });
     if (file) {
@@ -138,9 +142,10 @@ export const serveStream = CatchAsyncError(async (req: Request, res: Response) =
   const t = req.query.t;
   if (!mongoose.isValidObjectId(vid) || !verifyStreamToken(t, vid)) throw new ErrorHandler(403, "Invalid or expired stream link");
   if (!/^(index\.m3u8|seg_\d{4}\.ts)$/.test(file)) throw new ErrorHandler(404, "Not found");
-  const v: any = await ProjectVersion.findById(vid);
-  if (!v?.hlsKey) throw new ErrorHandler(404, "Not found");
-  const full = resolveKey(path.join(v.hlsKey, file));
+  let hlsKey: string | undefined = (await ProjectVersion.findById(vid) as any)?.hlsKey;
+  if (!hlsKey) hlsKey = ((await Project.findOne({ "references._id": vid }) as any)?.references ?? []).find((r: any) => String(r._id) === vid)?.hlsKey;
+  if (!hlsKey) throw new ErrorHandler(404, "Not found");
+  const full = resolveKey(path.join(hlsKey, file));
   res.setHeader("Cache-Control", "private, no-store");
   res.setHeader("X-Content-Type-Options", "nosniff");
   if (file.endsWith(".m3u8")) {
@@ -155,7 +160,7 @@ export const serveStream = CatchAsyncError(async (req: Request, res: Response) =
 // ---- comments ----
 const commentJson = (c: any) => ({
   _id: c._id, version: c.version, parentId: c.parentId, timecode: c.timecode, body: c.body, status: c.status,
-  authorName: c.guestName || c.authorName || "User", authorKey: c.authorKey, createdAt: c.createdAt,
+  authorName: c.guestName || c.authorName || "User", authorKey: c.authorKey, createdAt: c.createdAt, draft: !!c.draft,
 });
 
 export const listComments = CatchAsyncError(async (req: Request, res: Response) => {
@@ -172,7 +177,9 @@ export const listComments = CatchAsyncError(async (req: Request, res: Response) 
   );
   const rows: any[] = await ReviewComment.find({ version: v._id }).sort({ timecode: 1, createdAt: 1 }).populate("author", "name");
   const list = rows.map((c) => ({ ...c.toObject(), _id: String(c._id), versionId: String(v._id), parentId: c.parentId ? String(c.parentId) : null, authorName: c.author?.name }));
-  const out = filterComments(list as any[], { status: q.status, mine: q.mine === "true", fromTime: q.from, toTime: q.to }, a.key);
+  // Owner drafts stay private until "Send feedback".
+  const visible = list.filter((c) => !c.draft || c.authorKey === a.key);
+  const out = filterComments(visible as any[], { status: q.status, mine: q.mine === "true", fromTime: q.from, toTime: q.to }, a.key);
   res.json({ success: true, comments: out.map(commentJson) });
 });
 
@@ -187,9 +194,10 @@ export const addComment = CatchAsyncError(async (req: Request, res: Response) =>
     project: a.project._id, version: v._id, parentId: parent?._id ?? null,
     // A reply sits at its parent's time so the thread stays on one marker.
     timecode: parent ? parent.timecode : input.timecode, body: input.body, author: a.userId,
-    guestName: a.role === "guest" ? a.name : undefined, authorKey: a.key,
+    guestName: a.userId ? undefined : a.name, authorKey: a.key,
+    draft: a.role === "owner",
   });
-  void notifyProject({
+  if (!c.draft) void notifyProject({
     project: a.project, exceptUserId: a.userId, subject: `New comment on ${a.project.title}`,
     heading: "New comment", body: `${a.name} commented at ${Math.floor(c.timecode)}s: ${input.body.slice(0, 200)}`,
   });
@@ -271,7 +279,7 @@ export const revokeLink = CatchAsyncError(async (req: Request, res: Response) =>
 /** Guest enters with the link token (+ optional password). Same error for every failure. */
 export const enterLink = CatchAsyncError(async (req: Request, res: Response) => {
   const { token, password, name } = parse(
-    z.object({ token: z.string().min(10).max(200), password: z.string().max(100).optional(), name: z.string().trim().min(1).max(60) }),
+    z.object({ token: z.string().min(10).max(200), password: z.string().max(100).optional(), name: z.string().trim().min(1).max(60).optional() }),
     req.body
   );
   const fail = () => new ErrorHandler(401, "This review link is invalid, expired or needs a different password");
@@ -280,8 +288,130 @@ export const enterLink = CatchAsyncError(async (req: Request, res: Response) => 
   if (link.passwordHash && !(password && (await bcrypt.compare(password, link.passwordHash)))) throw fail();
   const project: any = await Project.findById(link.project);
   if (!project) throw fail();
+  const who = name || (link.email ? String(link.email).split("@")[0] : "");
+  if (!who) throw new ErrorHandler(422, "Enter your name");
   res.json({
-    success: true, projectId: project._id, title: project.title,
-    guestToken: signGuestToken({ pid: String(project._id), lid: String(link._id), name }, link.expiresAt),
+    success: true, projectId: project._id, title: project.title, role: link.role === "editor" ? "editor" : "guest",
+    guestToken: signGuestToken({ pid: String(project._id), lid: String(link._id), name: who }, link.expiresAt),
   });
+});
+
+/** What a link is for, so the page can skip the name prompt for invited editors. Same 404 for every failure. */
+export const inspectLink = CatchAsyncError(async (req: Request, res: Response) => {
+  const link: any = await ReviewLink.findOne({ tokenHash: hashToken(String(req.params.token)) });
+  if (!link || link.revoked || (link.expiresAt && link.expiresAt < new Date())) throw new ErrorHandler(404, "This review link is invalid or expired");
+  res.json({ success: true, role: link.role === "editor" ? "editor" : "guest", hasPassword: !!link.passwordHash, needsName: link.role !== "editor" });
+});
+
+// ---- brief + references (owner writes, everyone on the project reads) ----
+export const setBrief = CatchAsyncError(async (req: Request, res: Response) => {
+  assertCan(req.actor!.role, "manage_links");
+  const { brief } = parse(z.object({ brief: z.string().max(5000) }), req.body);
+  await Project.updateOne({ _id: req.actor!.project._id }, { brief });
+  res.json({ success: true });
+});
+
+export const addReference = CatchAsyncError(async (req: Request, res: Response) => {
+  const a = req.actor!;
+  assertCan(a.role, "manage_links");
+  const file = req.file;
+  try {
+    const body = parse(z.object({
+      title: z.string().trim().max(120).optional(),
+      url: z.string().url().max(500).refine((u) => u.startsWith("https://"), "Use an https link").optional(),
+    }), req.body);
+    if (!file && !body.url) throw new ErrorHandler(422, "Add a link or upload a reference video");
+    if ((a.project.references ?? []).length >= 10) throw new ErrorHandler(409, "At most 10 references per project");
+    const ref: any = { kind: file ? "upload" : "link", title: body.title || (file ? file.originalname.slice(0, 120) : undefined), url: file ? undefined : body.url, processing: file ? "pending" : "ready" };
+    await Project.updateOne({ _id: a.project._id }, { $push: { references: ref } });
+    const fresh: any = await Project.findById(a.project._id);
+    const saved = fresh.references[fresh.references.length - 1];
+    if (file) {
+      const dir = path.join(storageRoot(), "projects", String(a.project._id), "refs", String(saved._id));
+      fs.mkdirSync(dir, { recursive: true });
+      const src = path.join(dir, `source${path.extname(file.originalname).toLowerCase()}`);
+      await fs.promises.rename(file.path, src);
+      void processReference(String(a.project._id), String(saved._id), src, path.join(dir, "hls"));
+    }
+    res.status(201).json({ success: true, reference: { _id: saved._id, kind: saved.kind, title: saved.title, url: saved.url, processing: saved.processing } });
+  } catch (e) {
+    if (file) await fs.promises.unlink(file.path).catch(() => {});
+    throw e;
+  }
+});
+
+const processReference = async (projectId: string, refId: string, src: string, hlsDir: string) => {
+  const set = (processing: string, hlsKey?: string) =>
+    Project.updateOne({ _id: projectId, "references._id": refId }, { $set: { "references.$.processing": processing, ...(hlsKey ? { "references.$.hlsKey": hlsKey } : {}) } });
+  try {
+    await probeDuration(src);
+    await toHls(src, hlsDir);
+    await set("ready", path.relative(storageRoot(), hlsDir));
+  } catch (e: any) {
+    logger.error("reference_transcode_failed", { refId, errorMessage: e?.message });
+    await set("failed");
+  }
+};
+
+export const deleteReference = CatchAsyncError(async (req: Request, res: Response) => {
+  assertCan(req.actor!.role, "manage_links");
+  if (!mongoose.isValidObjectId(req.params.rid)) throw new ErrorHandler(404, "Reference not found");
+  await Project.updateOne({ _id: req.actor!.project._id }, { $pull: { references: { _id: req.params.rid } } });
+  res.json({ success: true });
+});
+
+export const referenceStreamUrl = CatchAsyncError(async (req: Request, res: Response) => {
+  const r: any = (req.actor!.project.references ?? []).find((x: any) => String(x._id) === req.params.rid);
+  if (!r) throw new ErrorHandler(404, "Reference not found");
+  if (r.kind === "link") return res.json({ success: true, kind: "link", url: r.url });
+  if (r.processing !== "ready") throw new ErrorHandler(409, `Video is ${r.processing}`);
+  res.json({ success: true, kind: "hls", url: `/v1/stream/${r._id}/index.m3u8?t=${signStreamToken(String(r._id))}` });
+});
+
+// ---- editor invites: one e-mail, then a magic link; no account needed ----
+export const inviteEditor = CatchAsyncError(async (req: Request, res: Response) => {
+  const a = req.actor!;
+  assertCan(a.role, "manage_links");
+  const { email } = parse(z.object({ email: z.string().trim().toLowerCase().email().max(200) }), req.body);
+  const project: any = a.project;
+  // One live link per editor e-mail: re-inviting replaces the old link.
+  const old = (project.editorInvites ?? []).find((i: any) => i.email === email);
+  if (old?.linkId) await ReviewLink.updateOne({ _id: old.linkId }, { revoked: true });
+  const raw = newLinkToken();
+  const link: any = await ReviewLink.create({
+    project: project._id, tokenHash: hashToken(raw), createdBy: a.userId, role: "editor", email, rawEnc: encrypt(raw),
+    expiresAt: new Date(Date.now() + 90 * 86400000),
+  });
+  await Project.updateOne({ _id: project._id }, { $pull: { editorInvites: { email } } });
+  await Project.updateOne({ _id: project._id }, { $push: { editorInvites: { email, linkId: link._id, invitedAt: new Date() } } });
+  const url = reviewLinkUrl(raw);
+  const emailSent = await mailLink(
+    email, `${a.name} invited you to edit "${project.title}"`, "You have been invited as the editor",
+    `${a.name} added you as the editor. Open the link to watch the video, read the notes and reference videos, and see feedback at exact timestamps. Upload your updated cut there when it is ready.`,
+    url, project.title
+  );
+  // The raw link is shown once so the owner can also share it manually.
+  res.status(201).json({ success: true, invite: { email }, emailSent, link: url });
+});
+
+/** Publishes the owner's private drafts for this version and mails every invited editor one digest. */
+export const sendFeedback = CatchAsyncError(async (req: Request, res: Response) => {
+  const a = req.actor!;
+  assertCan(a.role, "approve");
+  const v = await getVersion(String(a.project._id), req.params.vid);
+  const drafts: any[] = await ReviewComment.find({ version: v._id, authorKey: a.key, draft: true }).sort({ timecode: 1 });
+  if (!drafts.length) throw new ErrorHandler(409, "No feedback to send. Add comments first.");
+  if (!(a.project.editorInvites ?? []).length && !(a.project.editors ?? []).length) throw new ErrorHandler(409, "Invite your editor first so they receive the feedback");
+  await ReviewComment.updateMany({ version: v._id, authorKey: a.key, draft: true }, { draft: false });
+  if (a.project.status === "in_review") await Project.updateOne({ _id: a.project._id }, { status: "changes_requested" });
+  const lines = drafts.map((d) => `${Math.floor(d.timecode / 60)}:${String(Math.floor(d.timecode % 60)).padStart(2, "0")}  ${d.body}`).join("\n");
+  let sent = 0;
+  for (const inv of a.project.editorInvites ?? []) {
+    const link: any = await ReviewLink.findById(inv.linkId);
+    if (!link || link.revoked) continue;
+    if (!link.rawEnc) continue;
+    if (await mailLink(inv.email, `Feedback on "${a.project.title}" (${drafts.length} notes)`, `${drafts.length} change${drafts.length === 1 ? "" : "s"} requested`, `${a.name} sent feedback on version ${v.number}:\n${lines}`, reviewLinkUrl(decrypt(link.rawEnc)), a.project.title)) sent++;
+  }
+  void notifyProject({ project: a.project, exceptUserId: a.userId, subject: `Feedback on ${a.project.title}`, heading: `${drafts.length} change${drafts.length === 1 ? "" : "s"} requested`, body: lines });
+  res.json({ success: true, count: drafts.length, emailed: sent });
 });

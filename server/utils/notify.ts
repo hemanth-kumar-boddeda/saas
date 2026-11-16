@@ -35,3 +35,20 @@ export const notifyProject = async (e: Event) => {
     logger.error("notify_failed", { errorMessage: err?.message });
   }
 };
+
+const clientOrigin = () => (process.env.CLIENT_ORIGIN || "http://localhost:3000").split(",")[0].trim();
+export const reviewLinkUrl = (rawToken: string) => `${clientOrigin()}/review/${rawToken}`;
+
+/**
+ * Direct mail to one address with a link (editor invites, feedback digests).
+ * Returns whether it was sent; never throws. Without SMTP in dev the mail is printed instead.
+ */
+export const mailLink = async (to: string, subject: string, heading: string, body: string, link: string, project: string) => {
+  try {
+    await sendMail({ email: to, subject, template: "review-event.ejs", data: { heading, body, project, link } });
+    return true;
+  } catch (err: any) {
+    logger.error("mail_link_failed", { errorMessage: err?.message });
+    return false;
+  }
+};

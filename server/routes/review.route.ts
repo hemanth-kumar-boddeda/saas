@@ -33,6 +33,7 @@ const member = projectAccess();
 const any = projectAccess({ allowGuest: true });
 
 r.post("/review-links/enter", authIpLimiter, c.enterLink);
+r.get("/review-links/:token/info", authIpLimiter, c.inspectLink);
 r.get("/stream/:vid/:file", c.serveStream);
 
 r.post("/projects", requireUser, c.createProject);
@@ -40,11 +41,18 @@ r.get("/projects", requireUser, c.listProjects);
 r.get("/projects/:id", any, c.getProject);
 r.post("/projects/:id/editors", member, c.addEditor);
 
-r.post("/projects/:id/versions", member, uploadMw, c.addVersion);
+r.post("/projects/:id/versions", any, uploadMw, c.addVersion); // invited editors (magic link) can upload; permissions checked in the controller
 r.get("/projects/:id/versions/:vid/stream-url", any, c.streamUrl);
 r.get("/projects/:id/versions/:vid/comments", any, c.listComments);
 r.post("/projects/:id/versions/:vid/comments", any, c.addComment);
 r.patch("/projects/:id/comments/:cid/status", member, c.setCommentStatus);
+
+r.put("/projects/:id/brief", member, c.setBrief);
+r.post("/projects/:id/references", member, uploadMw, c.addReference);
+r.delete("/projects/:id/references/:rid", member, c.deleteReference);
+r.get("/projects/:id/references/:rid/stream-url", any, c.referenceStreamUrl);
+r.post("/projects/:id/editor-invites", member, c.inviteEditor);
+r.post("/projects/:id/versions/:vid/send-feedback", member, c.sendFeedback);
 
 r.post("/projects/:id/approval", member, c.decide);
 r.get("/projects/:id/approvals", member, c.approvalLog);

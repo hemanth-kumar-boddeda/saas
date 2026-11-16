@@ -15,6 +15,16 @@ const projectSchema = new Schema(
     },
     currentVersion: { type: Number, default: 0 },
     channel: { type: Schema.Types.ObjectId, ref: "Channel" },
+    // What the owner wants changed, plus reference videos for the editor.
+    brief: { type: String, maxlength: 5000, default: "" },
+    references: [{
+      kind: { type: String, enum: ["link", "upload"], required: true },
+      title: { type: String, maxlength: 120 },
+      url: String, sourceKey: String, hlsKey: String,
+      processing: { type: String, enum: ["pending", "ready", "failed"], default: "ready" },
+    }],
+    // Editors invited by e-mail; they open a magic link, no account needed.
+    editorInvites: [{ _id: false, email: String, linkId: Schema.Types.ObjectId, invitedAt: Date }],
   },
   { timestamps: true }
 );
@@ -30,7 +40,8 @@ const versionSchema = new Schema(
     externalUrl: String,
     processing: { type: String, enum: ["pending", "ready", "failed"], default: "pending" },
     duration: Number,
-    uploadedBy: ref("User"),
+    uploadedBy: ref("User", false),
+    uploadedByName: String,
     note: { type: String, maxlength: 500 },
   },
   { timestamps: true }
@@ -50,6 +61,8 @@ const commentSchema = new Schema(
     guestName: { type: String, maxlength: 60 },
     authorKey: { type: String, required: true },
     resolvedBy: { type: Schema.Types.ObjectId, ref: "User" },
+    // Owner notes stay private drafts until "Send feedback".
+    draft: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
@@ -61,6 +74,10 @@ const linkSchema = new Schema(
     passwordHash: String,
     expiresAt: Date,
     revoked: { type: Boolean, default: false },
+    role: { type: String, enum: ["guest", "editor"], default: "guest" },
+    email: String,
+    // Editor links only: encrypted raw token so later digests can include the same magic link.
+    rawEnc: String,
     createdBy: ref("User"),
   },
   { timestamps: true }

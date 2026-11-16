@@ -51,7 +51,7 @@ export const projectAccess = (opts: { allowGuest?: boolean } = {}) =>
         }
         const project = await Project.findById(id);
         if (!project) throw new ErrorHandler(404, "Project not found");
-        req.actor = { role: "guest", key: `g:${claims.lid}:${claims.name}`, name: claims.name, project };
+        req.actor = { role: link.role === "editor" ? "editor" : "guest", key: `g:${claims.lid}:${claims.name}`, name: claims.name, project };
         return next();
       }
 

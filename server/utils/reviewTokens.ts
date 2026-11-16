@@ -35,6 +35,7 @@ export interface GuestClaims {
   pid: string;
   lid: string;
   name: string;
+  role?: "guest" | "editor";
 }
 
 export const signGuestToken = (claims: GuestClaims, expiresAt?: Date | null) => {
