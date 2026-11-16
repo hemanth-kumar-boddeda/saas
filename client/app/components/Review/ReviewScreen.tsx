@@ -5,8 +5,10 @@ import { toast } from "react-toastify";
 import Player, { PlayerHandle } from "./Player";
 import PublishKit from "./PublishKit";
 import YouTubePlayer, { youtubeId } from "./YouTubePlayer";
+import Brief from "./Brief";
+import { InstagramEmbed, instagramId } from "./Embed";
 import {
-  errMsg, useAddCommentMutation, useAddEditorMutation, useAddVersionMutation, useApprovalsQuery, useCreateLinkMutation, useDecideMutation,
+  errMsg, useAddCommentMutation, useInviteEditorMutation, useSendFeedbackMutation, useAddVersionMutation, useApprovalsQuery, useCreateLinkMutation, useDecideMutation,
   useGetProjectQuery, useListCommentsQuery, useListLinksQuery, useRevokeLinkMutation, useSetCommentStatusMutation,
   useStreamUrlQuery,
 } from "../../../redux/features/review/reviewApi";
@@ -48,6 +50,7 @@ export default function ReviewScreen({ projectId, guest }: { projectId: string; 
   const vid = picked || versions[versions.length - 1]?._id;
   const version = versions.find((v) => v._id === vid);
   const ytId = version?.kind === "link" ? youtubeId(version.externalUrl) : null;
+  const ig = version?.kind === "link" && !ytId && !!instagramId(version.externalUrl);
   const pending = versions.some((v) => v.processing === "pending");
   if (pending !== busy) setBusy(pending);
   const [ytDuration, setYtDuration] = useState(0);
@@ -101,6 +104,8 @@ export default function ReviewScreen({ projectId, guest }: { projectId: string; 
         {!guest && <Stepper status={project.status} />}
       </header>
 
+      <Brief projectId={projectId} role={role} brief={project.brief || ""} references={project.references || []} />
+
       {!version ? (
         <div className={`${card} text-center`}>
           <p className="mb-2">No video yet.</p>
@@ -111,14 +116,15 @@ export default function ReviewScreen({ projectId, guest }: { projectId: string; 
           <section>
             {version.processing === "pending" && <div className={`${card} flex items-center gap-3`} role="status"><span className="cf-skeleton h-3 w-3 !rounded-full" />Processing your video. The preview appears here automatically.</div>}
             {version.processing === "failed" && <div className={`${card} text-red-300`}>Processing failed. Upload this version again.</div>}
-            {version.kind === "link" && !ytId && (
+            {version.kind === "link" && !ytId && !ig && (
               <div className={card}>
                 <a className="underline break-all" href={version.externalUrl} target="_blank" rel="noreferrer noopener">{version.externalUrl}</a>
-                <p className="text-xs text-cf-muted mt-1">This link cannot be embedded here. Open it in a new tab and enter timecodes by hand. Only YouTube links play inside CreatorFlow.</p>
+                <p className="text-xs text-cf-muted mt-1">This link cannot be embedded here. Open it in a new tab and enter timecodes by hand. YouTube links play inside CreatorFlow with automatic timecodes; Instagram links play but need timecodes typed in.</p>
               </div>
             )}
             {stream.isFetching && <div className={card}>Loading player…</div>}
             {stream.data?.kind === "hls" && <Player ref={player} src={stream.data.url} onTime={setNow} />}
+            {ig && <InstagramEmbed url={version.externalUrl} />}
             {ytId && <YouTubePlayer ref={player} videoId={ytId} onTime={setNow} onDuration={setYtDuration} />}
             {stream.isError && <p className="text-red-300 text-sm">{errMsg(stream.error)}</p>}
 
@@ -161,6 +167,7 @@ export default function ReviewScreen({ projectId, guest }: { projectId: string; 
                 <input type="checkbox" checked={mine} onChange={(e) => setMine(e.target.checked)} /> Mine
               </label>
             </div>
+            {role === "owner" && <SendFeedback projectId={projectId} vid={vid} drafts={comments.filter((c) => c.draft).length} />}
             <div className="overflow-y-auto flex-1 space-y-3">
               {loadingComments && <p className="text-sm text-cf-muted">Loading comments…</p>}
               {!loadingComments && roots.length === 0 && <p className="text-sm text-cf-muted">No comments yet. Pause the video and add the first one.</p>}
@@ -173,13 +180,14 @@ export default function ReviewScreen({ projectId, guest }: { projectId: string; 
         </div>
       )}
 
-      {!guest && (
+      {(role === "owner" || role === "editor") && (
         <div className="mt-6 grid gap-4 md:grid-cols-2">
           <UploadVersion projectId={projectId} />
+          {guest && <p className="text-sm text-cf-muted self-center">Finished editing? Upload your new cut (or paste a link) here. The owner is notified.</p>}
           {role === "owner" && version && isLatest && <ApprovalBox projectId={projectId} vid={vid} status={project.status} />}
           {role === "owner" && <ShareLinks projectId={projectId} />}
-          {role === "owner" && <InviteEditor projectId={projectId} count={project.editors?.length || 0} />}
-          <ApprovalLog projectId={projectId} />
+          {role === "owner" && <InviteEditor projectId={projectId} invites={project.editorInvites || []} />}
+          {!guest && <ApprovalLog projectId={projectId} />}
         </div>
       )}
       {!guest && (project.status === "approved" || project.status === "published") && (
@@ -201,6 +209,7 @@ function Thread({ c, replies, projectId, vid, role, seek }: any) {
         <span aria-hidden="true" className="flex h-6 w-6 items-center justify-center rounded-full bg-cf-violet/30 text-[11px] font-semibold text-violet-100">{String(c.authorName || "?").slice(0, 1).toUpperCase()}</span>
         <span className="text-cf-text">{c.authorName}</span>
         <button className="cf-badge border-cf-violet/40 bg-cf-violet/10 font-mono text-violet-200 hover:bg-cf-violet/20" onClick={() => seek(c.timecode)}>{fmt(c.timecode)}</button>
+        {c.draft && <span className="cf-badge border-amber-500/30 bg-amber-500/10 text-amber-300">Draft, not sent</span>}
         {c.status === "resolved" && <span className="text-green-300">resolved</span>}
       </div>
       <p className="text-sm whitespace-pre-wrap break-words">{c.body}</p>
@@ -400,29 +409,60 @@ function ApprovalLog({ projectId }: { projectId: string }) {
   );
 }
 
-function InviteEditor({ projectId, count }: { projectId: string; count: number }) {
+function InviteEditor({ projectId, invites }: { projectId: string; invites: { email: string }[] }) {
   const [email, setEmail] = useState("");
-  const [add, { isLoading }] = useAddEditorMutation();
+  const [invite, { isLoading }] = useInviteEditorMutation();
+  const [last, setLast] = useState<{ link: string; emailSent: boolean } | null>(null);
+  const send = async (to: string) => {
+    try {
+      const r = await invite({ id: projectId, email: to.trim() }).unwrap();
+      setLast({ link: r.link, emailSent: r.emailSent });
+      toast.success(r.emailSent ? `Invite sent to ${to}` : "Link created. Email could not be sent, copy the link below.");
+      setEmail("");
+    } catch (er) { toast.error(errMsg(er)); }
+  };
   return (
-    <form
-      className={card}
-      onSubmit={async (e) => {
-        e.preventDefault();
+    <div className={card}>
+      <h2 className="font-semibold mb-1">Editor</h2>
+      <p className="text-xs text-cf-muted mb-2">Enter your editor&apos;s email once. They get a private link, no account needed. After this, &quot;Send feedback&quot; goes to them automatically.</p>
+      <ul className="mb-2 space-y-1 text-sm">
+        {invites.map((i) => (
+          <li key={i.email} className="flex items-center justify-between rounded-lg border border-cf-line bg-black/20 px-3 py-1.5">
+            <span>{i.email}</span>
+            <button className="underline text-xs" disabled={isLoading} onClick={() => send(i.email)}>Resend link</button>
+          </li>
+        ))}
+      </ul>
+      <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); send(email); }}>
+        <label htmlFor="editor-email" className="sr-only">Editor email</label>
+        <input id="editor-email" type="email" required className={input} placeholder="editor@email.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+        <button className={btnPrimary} disabled={isLoading || !email.trim()}>Invite</button>
+      </form>
+      {last && (
+        <p className="mt-2 break-all text-xs text-cf-muted">
+          {last.emailSent ? "Email sent. " : "Email not sent. "}Private link (shown once): <span className="text-cf-text select-all">{last.link}</span>
+        </p>
+      )}
+    </div>
+  );
+}
+
+function SendFeedback({ projectId, vid, drafts }: { projectId: string; vid: string; drafts: number }) {
+  const [send, { isLoading }] = useSendFeedbackMutation();
+  if (!drafts) return <p className="mb-2 text-xs text-cf-muted">Your comments stay private until you press Send feedback.</p>;
+  return (
+    <button
+      className={`${btnPrimary} mb-2 w-full`}
+      disabled={isLoading}
+      onClick={async () => {
         try {
-          await add({ id: projectId, email: email.trim() }).unwrap();
-          toast.success("Editor added");
-          setEmail("");
+          const r = await send({ id: projectId, vid }).unwrap();
+          toast.success(`${r.count} change${r.count === 1 ? "" : "s"} sent to your editor${r.emailed ? "" : " (email not sent, they will see them on the link)"}`);
         } catch (er) { toast.error(errMsg(er)); }
       }}
     >
-      <h2 className="font-semibold mb-1">Editors</h2>
-      <p className="text-xs text-cf-muted mb-2">{count} editor{count === 1 ? "" : "s"}. Editors can upload versions and comment. They must have a CreatorFlow account.</p>
-      <div className="flex gap-2">
-        <label htmlFor="editor-email" className="sr-only">Editor email</label>
-        <input id="editor-email" type="email" required className={input} placeholder="editor@email.com" value={email} onChange={(e) => setEmail(e.target.value)} />
-        <button className={btnPrimary} disabled={isLoading || !email.trim()}>Add editor</button>
-      </div>
-    </form>
+      {isLoading ? "Sending…" : `Send feedback to editor (${drafts})`}
+    </button>
   );
 }
 

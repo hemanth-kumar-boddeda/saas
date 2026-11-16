@@ -49,6 +49,31 @@ export const reviewApi = apiSlice.injectEndpoints({
       query: ({ id, email }) => ({ url: `projects/${id}/editors`, method: "POST", body: { email } }),
       invalidatesTags: ["Project"],
     }),
+    setBrief: b.mutation<any, { id: string; brief: string }>({
+      query: ({ id, brief }) => ({ url: `projects/${id}/brief`, method: "PUT", body: { brief } }),
+      invalidatesTags: ["Project"],
+    }),
+    addReference: b.mutation<any, { id: string; body: FormData | { url: string; title?: string } }>({
+      query: ({ id, body }) => ({ url: `projects/${id}/references`, method: "POST", body }),
+      invalidatesTags: ["Project"],
+    }),
+    deleteReference: b.mutation<any, { id: string; rid: string }>({
+      query: ({ id, rid }) => ({ url: `projects/${id}/references/${rid}`, method: "DELETE" }),
+      invalidatesTags: ["Project"],
+    }),
+    referenceStream: b.query<any, { id: string; rid: string }>({
+      query: ({ id, rid }) => `projects/${id}/references/${rid}/stream-url`,
+      keepUnusedDataFor: 0,
+    }),
+    inviteEditor: b.mutation<any, { id: string; email: string }>({
+      query: ({ id, email }) => ({ url: `projects/${id}/editor-invites`, method: "POST", body: { email } }),
+      invalidatesTags: ["Project"],
+    }),
+    sendFeedback: b.mutation<any, { id: string; vid: string }>({
+      query: ({ id, vid }) => ({ url: `projects/${id}/versions/${vid}/send-feedback`, method: "POST" }),
+      invalidatesTags: ["Project", "Comments"],
+    }),
+    linkInfo: b.query<any, string>({ query: (token) => `review-links/${token}/info` }),
     getKit: b.query<any, string>({ query: (id) => `projects/${id}/kit`, providesTags: ["Kit"] }),
     startKit: b.mutation<any, string>({
       query: (id) => ({ url: `projects/${id}/kit`, method: "POST" }),
@@ -78,7 +103,7 @@ export const reviewApi = apiSlice.injectEndpoints({
       invalidatesTags: ["Publications", "Project", "Projects"],
     }),
     listPublications: b.query<any, string>({ query: (id) => `projects/${id}/publications`, providesTags: ["Publications"] }),
-    enterLink: b.mutation<any, { token: string; name: string; password?: string }>({
+    enterLink: b.mutation<any, { token: string; name?: string; password?: string }>({
       query: (body) => ({ url: "review-links/enter", method: "POST", body }),
     }),
   }),
@@ -88,7 +113,7 @@ export const {
   useListProjectsQuery, useCreateProjectMutation, useGetProjectQuery, useAddVersionMutation, useStreamUrlQuery,
   useListCommentsQuery, useAddCommentMutation, useSetCommentStatusMutation, useDecideMutation, useApprovalsQuery,
   useCreateLinkMutation, useListLinksQuery, useRevokeLinkMutation, useEnterLinkMutation,
-  useGetKitQuery, useAddEditorMutation, useStartKitMutation, useEditKitMutation, useListChannelsQuery, useCreateChannelMutation, useSetProjectChannelMutation,
+  useGetKitQuery, useSetBriefMutation, useAddReferenceMutation, useDeleteReferenceMutation, useReferenceStreamQuery, useInviteEditorMutation, useSendFeedbackMutation, useLinkInfoQuery, useAddEditorMutation, useStartKitMutation, useEditKitMutation, useListChannelsQuery, useCreateChannelMutation, useSetProjectChannelMutation,
   useListAccountsQuery, useConnectAccountMutation, useDisconnectAccountMutation, usePublishMutation, useListPublicationsQuery,
 } = reviewApi;
 
