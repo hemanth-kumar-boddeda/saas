@@ -3,8 +3,10 @@
 import React, { useEffect, useRef } from "react";
 
 const LINES = [
-  "Good videos take a team.",
-  "Great workflows keep that team moving.",
+  "The notes are in six chats.",
+  "The cut is called final_v7_REAL.mp4.",
+  "Nobody knows what was approved.",
+  "CreatorFlow puts it on one timeline.",
 ];
 
 const TaglineReveal: React.FC = () => {

@@ -1,10 +1,10 @@
 import React, { ReactNode } from "react";
 import { Check } from "@phosphor-icons/react/dist/ssr/Check";
 import { ChatCircleDots } from "@phosphor-icons/react/dist/ssr/ChatCircleDots";
-import { ImageSquare } from "@phosphor-icons/react/dist/ssr/ImageSquare";
 import { PaperPlaneTilt } from "@phosphor-icons/react/dist/ssr/PaperPlaneTilt";
 import { Sparkle } from "@phosphor-icons/react/dist/ssr/Sparkle";
 import { YoutubeLogo } from "@phosphor-icons/react/dist/ssr/YoutubeLogo";
+import GlowCard from "./GlowCard";
 
 type Feature = {
   index: string;
@@ -17,45 +17,48 @@ type Feature = {
 
 const REVIEW_NOTES = [
   { time: "00:12", text: "Tighten the cold open, the hook lands late.", state: "Open" },
-  { time: "00:38", text: "Keep this framing for the product shot.", state: "Resolved" },
-  { time: "01:05", text: "Lower the music under the voice over.", state: "Open" },
+  { time: "00:38", text: "Voice note, 0:09: “Keep this framing for the product shot.”", state: "Done" },
+  { time: "01:05", text: "Drawing on frame: move the logo out of the corner.", state: "Open" },
 ];
 
-const AI_OUTPUT = [
-  { label: "Transcript", value: "Generated from the uploaded cut" },
-  { label: "Captions", value: "English, timestamps included" },
-  { label: "Translation", value: "Spanish, German, French" },
-  { label: "Chapters", value: "Three markers placed on the timeline" },
+const CHECKLIST = [
+  { label: "Cut the intro to five seconds", done: true },
+  { label: "Add captions at the bottom", done: true },
+  { label: "Lower the music under the voice", done: false },
 ];
 
-const THUMBNAILS = [
-  { label: "Concept A", headline: "The fix nobody talks about", tone: "bg-cf-violet" },
-  { label: "Concept B", headline: "Three mistakes, one workflow", tone: "bg-cf-cyan" },
-  { label: "Concept C", headline: "Ship the cut, not the file", tone: "bg-cf-overlay" },
+const KIT_OUTPUT = [
+  { label: "Thumbnails", value: "Best frames, text on top" },
+  { label: "Titles", value: "Several options, you choose" },
+  { label: "Description", value: "With chapters from the transcript" },
+  { label: "Tags and hashtags", value: "Editable" },
+  { label: "Captions", value: "SRT file" },
 ];
 
 const PUBLISH_ROWS = [
   { label: "Upload", value: "Version 4, approved by the owner" },
-  { label: "Title", value: "Product launch trailer" },
-  { label: "Description", value: "Drafted, waiting for the final edit" },
-  { label: "Chapters", value: "Three markers" },
+  { label: "Where", value: "YouTube or Instagram" },
+  { label: "When", value: "Now, or scheduled" },
+  { label: "Changed your mind", value: "Cancel before it goes out" },
 ];
+
+const head = "flex items-center gap-2 border-b border-cf-line pb-4 caption-2";
 
 const FEATURES: Feature[] = [
   {
     index: "Feature 01",
     Icon: ChatCircleDots,
-    title: "Review Studio",
+    title: "Review on the timeline",
     body:
-      "Feedback lands on the frame it talks about. The editor sees the note, the timestamp and the request together, and answers it without leaving the video.",
+      "Notes land on the second they talk about, in whichever way is quickest: type it, say it, or draw on the frame. Voice notes get a written transcript so nothing is lost on mute.",
     points: [
-      "Notes carry their own timestamp",
-      "Every note has an open or resolved state",
-      "The version a note refers to never changes",
+      "Text, voice and drawn notes on exact timestamps",
+      "Owner notes stay private drafts until you press Send feedback",
+      "One digest email to the editor, not forty pings",
     ],
     visual: (
-      <div className="cf-card p-6">
-        <div className="flex items-center gap-2 border-b border-cf-line pb-4 caption-2 text-cf-muted">
+      <GlowCard>
+        <div className={`${head} text-cf-muted`}>
           <ChatCircleDots size={16} />
           <span>Review notes on version 4</span>
         </div>
@@ -70,86 +73,90 @@ const FEATURES: Feature[] = [
             </li>
           ))}
         </ul>
-      </div>
+      </GlowCard>
     ),
   },
   {
     index: "Feature 02",
-    Icon: Sparkle,
-    title: "AI Creator Studio",
+    Icon: Check,
+    title: "Versions, compare, checklist",
     body:
-      "The AI tools read the cut you uploaded. They hand back a transcript, captions, a translation, chapter markers and title and description drafts that you edit before anything is applied.",
+      "Each new cut is a numbered version. Put two versions next to each other with shared play and one scrubber, and watch the editor tick the requested changes off as they go.",
     points: [
-      "Outputs come from your video, not a blank prompt",
-      "Every result is a draft you can change",
-      "Nothing is applied to the project without you",
+      "Side-by-side compare of any two processed uploads",
+      "Editors mark each change done from their link",
+      "You are told when every change is done",
     ],
     visual: (
-      <div className="cf-card p-6">
-        <div className="flex items-center gap-2 border-b border-cf-line pb-4 caption-2 text-cf-cyan">
-          <Sparkle size={16} />
-          <span>Generated from trailer cut v1</span>
+      <GlowCard>
+        <div className={`${head} text-cf-muted`}>
+          <Check size={16} />
+          <span>Change checklist, 2 of 3 done</span>
         </div>
         <ul className="mt-4 flex flex-col gap-3">
-          {AI_OUTPUT.map((row) => (
+          {CHECKLIST.map((row) => (
+            <li key={row.label} className="flex items-center gap-3">
+              <span
+                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
+                  row.done ? "border-green-400/60 bg-green-400/20 text-green-300" : "border-cf-line text-transparent"
+                }`}
+              >
+                <Check size={12} />
+              </span>
+              <span className={`caption-2 ${row.done ? "text-cf-muted line-through" : "text-cf-text"}`}>{row.label}</span>
+            </li>
+          ))}
+        </ul>
+        <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-cf-line">
+          <div className="h-full w-2/3 rounded-full bg-green-400" />
+        </div>
+      </GlowCard>
+    ),
+  },
+  {
+    index: "Feature 03",
+    Icon: Sparkle,
+    title: "AI publish kit",
+    body:
+      "Approve a version and CreatorFlow starts drafting from the transcript and the video frames. Everything is a draft you edit. It is a starting point and promises nothing about views.",
+    points: [
+      "Thumbnails built from the best frames",
+      "Titles, description, chapters, tags, hashtags and SRT captions",
+      "Every field stays editable before anything is published",
+    ],
+    visual: (
+      <GlowCard>
+        <div className={`${head} text-cf-cyan`}>
+          <Sparkle size={16} />
+          <span>Drafted after approval</span>
+        </div>
+        <ul className="mt-4 flex flex-col gap-3">
+          {KIT_OUTPUT.map((row) => (
             <li key={row.label} className="flex items-start justify-between gap-4">
               <span className="caption-2 text-cf-text">{row.label}</span>
               <span className="caption-3 text-right text-cf-muted">{row.value}</span>
             </li>
           ))}
         </ul>
-      </div>
-    ),
-  },
-  {
-    index: "Feature 03",
-    Icon: ImageSquare,
-    title: "Thumbnail Studio",
-    body:
-      "Thumbnail concepts are generated from the video itself, so the frame and the headline come from the same material. Pick a concept, refine the text, export the frame.",
-    points: [
-      "Concepts are built from frames in your video",
-      "Three directions side by side",
-      "Export at the resolution YouTube expects",
-    ],
-    visual: (
-      <div className="cf-card p-6">
-        <div className="flex items-center gap-2 border-b border-cf-line pb-4 caption-2 text-cf-muted">
-          <ImageSquare size={16} />
-          <span>Thumbnail concepts</span>
-        </div>
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
-          {THUMBNAILS.map((thumb) => (
-            <div key={thumb.label} className="flex flex-col gap-2">
-              <div
-                className={`flex aspect-video items-end rounded p-2 ${thumb.tone}`}
-                aria-hidden="true"
-              >
-                <span className="caption-4 text-white">{thumb.headline}</span>
-              </div>
-              <span className="caption-4 text-cf-muted">{thumb.label}</span>
-            </div>
-          ))}
-        </div>
-      </div>
+      </GlowCard>
     ),
   },
   {
     index: "Feature 04",
     Icon: PaperPlaneTilt,
-    title: "YouTube Publishing",
+    title: "Publish or schedule",
     body:
-      "Publishing sends the approved version with the metadata that was confirmed next to it. The version that was approved is the version that goes out.",
+      "Connect your YouTube channel or Instagram account, pick a time, and the approved version goes out with the kit you edited. Cancel a scheduled post any time before release.",
     points: [
       "Only an approved version can be published",
-      "Metadata is confirmed before the upload",
-      "The channel connection stays in your account",
+      "YouTube and Instagram, now or scheduled",
+      "Your channel connection stays in your account",
     ],
     visual: (
-      <div className="cf-card p-6">
-        <div className="flex items-center gap-2 border-b border-cf-line pb-4 caption-2 text-cf-muted">
+      <GlowCard>
+        <div className={`${head} text-cf-muted`}>
           <YoutubeLogo size={16} />
-          <span>Publishing package</span>
+          <span>Publishing</span>
         </div>
         <ul className="mt-4 flex flex-col gap-3">
           {PUBLISH_ROWS.map((row) => (
@@ -163,7 +170,7 @@ const FEATURES: Feature[] = [
           <YoutubeLogo size={14} />
           <span>Connect a channel to publish</span>
         </div>
-      </div>
+      </GlowCard>
     ),
   },
 ];
@@ -174,11 +181,11 @@ const FeatureShowcase: React.FC = () => (
       <div className="cf-measure">
         <span className="cf-chip">In detail</span>
         <h2 className="cf-section-heading mt-6 text-cf-text">
-          Four studios that share one project
+          Four steps that share one project
         </h2>
         <p className="body-3 mt-4 text-cf-muted md:body-1">
-          Each studio works on the same video, the same versions and the same notes.
-          Nothing has to be exported and re-imported to move to the next step.
+          Review, versions, AI kit and publishing work on the same video, the same
+          versions and the same notes. Nothing is exported and re-imported.
         </p>
       </div>
 
@@ -202,7 +209,6 @@ const FeatureShowcase: React.FC = () => (
                   </li>
                 ))}
               </ul>
-              <span className="cf-chip mt-6 inline-flex">Planned</span>
             </div>
             <div className={index % 2 === 1 ? "md:order-1" : undefined}>{feature.visual}</div>
           </article>

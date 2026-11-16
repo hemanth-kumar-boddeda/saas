@@ -1,4 +1,5 @@
 import React from "react";
+import GlowCard from "./GlowCard";
 import { Check } from "@phosphor-icons/react/dist/ssr/Check";
 import { CrownSimple } from "@phosphor-icons/react/dist/ssr/CrownSimple";
 import { PencilSimple } from "@phosphor-icons/react/dist/ssr/PencilSimple";
@@ -11,8 +12,8 @@ const ROLES = [
     points: [
       "Approve one exact version of a cut",
       "Publish the approved version",
-      "Connect the channel and manage members",
-      "See the status of every project",
+      "Send feedback in one digest",
+      "Get notified when every change is done",
     ],
     accent: "text-cf-violet",
   },
@@ -21,10 +22,10 @@ const ROLES = [
     title: "Editor",
     summary: "Makes the cut and answers the notes that come back.",
     points: [
-      "Upload a new numbered version",
-      "Answer review notes on the timestamp",
-      "Prepare title, description and chapters",
-      "See what is waiting on the owner",
+      "Open a magic link, no account needed",
+      "See notes and a change checklist",
+      "Mark each change done",
+      "Upload the next version",
     ],
     accent: "text-cf-cyan",
   },
@@ -43,17 +44,17 @@ const TeamWorkflow: React.FC = () => (
       <div className="cf-measure">
         <span className="cf-chip">For teams</span>
         <h2 className="cf-section-heading mt-6 text-cf-text">
-          One project, two clear responsibilities
+          One project, three clear roles
         </h2>
         <p className="body-3 mt-4 text-cf-muted md:body-1">
-          Everyone on a project works from the same video and the same status. The
-          difference between an owner and an editor is the decision, not the access.
+          Everyone on a project works from the same video and the same status. Owners
+          decide. Editors do the work from a link. Guests can comment.
         </p>
       </div>
 
       <div className="mt-12 grid gap-6 md:grid-cols-2">
         {ROLES.map(({ Icon, title, summary, points, accent }) => (
-          <article key={title} className="cf-card p-6">
+          <GlowCard key={title}>
             <span className={`flex h-10 w-10 items-center justify-center rounded-lg border border-cf-line bg-cf-raised ${accent}`}>
               <Icon size={18} />
             </span>
@@ -69,7 +70,7 @@ const TeamWorkflow: React.FC = () => (
                 </li>
               ))}
             </ul>
-          </article>
+          </GlowCard>
         ))}
       </div>
 
@@ -84,7 +85,7 @@ const TeamWorkflow: React.FC = () => (
           ))}
         </ul>
         <p className="mt-4 caption-3 text-cf-muted">
-          Roles and status are part of the planned workspace. The build is in progress.
+          Sample status for illustration. Guests with a share link can comment but cannot approve.
         </p>
       </div>
     </div>

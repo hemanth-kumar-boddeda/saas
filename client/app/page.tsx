@@ -5,7 +5,7 @@ import ProductShowcase from "./components/landing/ProductShowcase";
 import TaglineReveal from "./components/landing/TaglineReveal";
 import ProblemSolutionSection from "./components/landing/ProblemSolutionSection";
 import BenefitsSection from "./components/landing/BenefitsSection";
-import WorkflowSteps from "./components/landing/WorkflowSteps";
+import StoryTimeline from "./components/landing/StoryTimeline";
 import FeatureShowcase from "./components/landing/FeatureShowcase";
 import TeamWorkflow from "./components/landing/TeamWorkflow";
 import FAQSection from "./components/landing/FAQSection";
@@ -14,9 +14,9 @@ import MarketingFooter from "./components/landing/MarketingFooter";
 import { FAQS } from "./components/landing/faqs";
 
 export const metadata: Metadata = {
-  title: "CreatorFlow, your YouTube workflow in one workspace",
+  title: "CreatorFlow, review, approve and publish videos together",
   description:
-    "CreatorFlow keeps uploads, versions, review notes, approval and publishing details for a YouTube video in one workspace.",
+    "Review videos with timestamped text, voice and drawn notes, compare versions, approve, and publish or schedule to YouTube and Instagram from one workspace.",
 };
 
 const FAQ_JSON_LD = {
@@ -36,7 +36,7 @@ const APP_JSON_LD = {
   applicationCategory: "BusinessApplication",
   operatingSystem: "Web",
   description:
-    "A workspace for YouTube production that keeps uploads, versions, review notes, approval and publishing details together.",
+    "A workspace where creators and editors review videos with timestamped notes, compare versions, approve, and publish or schedule to YouTube and Instagram.",
 };
 
 export default function Page() {
@@ -67,7 +67,7 @@ export default function Page() {
           <TaglineReveal />
           <ProblemSolutionSection />
           <BenefitsSection />
-          <WorkflowSteps />
+          <StoryTimeline />
           <FeatureShowcase />
           <TeamWorkflow />
           <FAQSection />

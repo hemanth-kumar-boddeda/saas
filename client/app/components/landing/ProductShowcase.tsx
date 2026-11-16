@@ -10,8 +10,8 @@ const ProductShowcase: React.FC = () => (
           The whole workspace, in one view
         </h2>
         <p className="body-3 mt-4 text-cf-muted md:body-1">
-          Files, versions, review notes, approval and publishing details sit next to
-          each other. This is the shape of the workspace the build is heading towards.
+          Video, versions, review notes, approval and the publish kit sit next to each
+          other, so nobody has to ask which file is current.
         </p>
       </div>
 
@@ -20,7 +20,7 @@ const ProductShowcase: React.FC = () => (
       </div>
 
       <p className="mt-4 caption-3 text-cf-muted">
-        The preview shows a sample project with made up content for illustration.
+        The preview shows a sample project with made up content, drawn to match the real screens.
       </p>
     </div>
   </section>

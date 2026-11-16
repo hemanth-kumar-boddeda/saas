@@ -22,8 +22,8 @@ const COMMENTS = [
     text: "Cold open needs a tighter hook before the title card.",
     active: true,
   },
-  { time: "00:38", text: "Product shot lands well here, keep this framing.", active: false },
-  { time: "01:05", text: "Lower the music under the voice over here.", active: false },
+  { time: "00:38", text: "Voice note 0:09 · “Keep this framing.”", active: false },
+  { time: "01:05", text: "Drawing on frame · logo out of the corner.", active: false },
 ];
 
 const VERSIONS = [
@@ -168,9 +168,9 @@ const ProductPreview: React.FC<Props> = ({ compact = false }) => {
                     <span>AI publishing package</span>
                   </div>
                   <ul className="mt-2 flex flex-col gap-1 caption-3 text-cf-muted">
-                    <li>Title suggestion</li>
-                    <li>Description draft</li>
-                    <li>Three chapter markers</li>
+                    <li>Thumbnails and title options</li>
+                    <li>Description and chapters</li>
+                    <li>Tags, hashtags, SRT captions</li>
                   </ul>
                 </div>
               </div>

@@ -7,17 +7,17 @@ const FinalCTA: React.FC = () => (
     <div className="mx-auto max-w-6xl px-4 md:px-8">
       <div className="cf-card flex flex-col items-start gap-6 p-8 md:p-12">
         <h2 className="cf-section-heading text-cf-text">
-          Make every video easier to move from draft to published.
+          Next Tuesday, ship the video instead of the thread.
         </h2>
         <p className="body-3 max-w-2xl text-cf-muted">
-          Create an account with your email or Google, and start a project the moment
-          you sign in.
+          Create an account with your email or Google, add a video, and send your
+          editor a link. AI drafts are a starting point; CreatorFlow does not promise views or reach.
         </p>
         <Link
           href="/signup"
           className="cf-btn cf-btn-primary button-lg"
         >
-          Start creating
+          Start your first review
           <ArrowRight size={18} />
         </Link>
       </div>

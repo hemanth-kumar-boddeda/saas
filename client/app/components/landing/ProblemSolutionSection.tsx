@@ -1,4 +1,5 @@
 import React from "react";
+import GlowCard from "./GlowCard";
 import { Check } from "@phosphor-icons/react/dist/ssr/Check";
 import { ChatCircleDots } from "@phosphor-icons/react/dist/ssr/ChatCircleDots";
 import { ClockCounterClockwise } from "@phosphor-icons/react/dist/ssr/ClockCounterClockwise";
@@ -49,7 +50,7 @@ const ProblemSolutionSection: React.FC = () => (
       </div>
 
       <div className="mt-12 grid gap-6 md:grid-cols-2">
-        <div className="cf-card p-6">
+        <GlowCard>
           <h3 className="title-3 text-cf-text">Where the work fragments</h3>
           <ul className="mt-4 flex flex-col gap-4">
             {FRAGMENTS.map(({ Icon, problem }) => (
@@ -61,9 +62,9 @@ const ProblemSolutionSection: React.FC = () => (
               </li>
             ))}
           </ul>
-        </div>
+        </GlowCard>
 
-        <div className="cf-card border-cf-violet/40 p-6">
+        <GlowCard accent>
           <h3 className="title-3 text-cf-text">One project workspace in CreatorFlow</h3>
           <ul className="mt-4 flex flex-col gap-4">
             {FRAGMENTS.map(({ Icon, solution }) => (
@@ -77,9 +78,9 @@ const ProblemSolutionSection: React.FC = () => (
           </ul>
           <p className="mt-6 flex items-center gap-2 caption-3 text-cf-muted">
             <PaperPlaneTilt size={14} />
-            <span>Planned workspace behaviour. The build is in progress.</span>
+            <span>Live in CreatorFlow today.</span>
           </p>
-        </div>
+        </GlowCard>
       </div>
     </div>
   </section>
