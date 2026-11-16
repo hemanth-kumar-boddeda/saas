@@ -64,3 +64,14 @@ export const activationTokenLimiter: RateLimitRequestHandler = rateLimit({
     return `act:${hash}`;
   },
 });
+
+// AI endpoints cost money: 5 kit generations/hour per signed-in user.
+// Mount after requireUser/projectAccess so req.user is set.
+export const aiLimiter: RateLimitRequestHandler = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: Number(process.env.AI_RATE_LIMIT_PER_HOUR) || 5,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  handler: limitHandler,
+  keyGenerator: (req: Request) => `ai:${String(req.user?._id ?? "anon")}`,
+});

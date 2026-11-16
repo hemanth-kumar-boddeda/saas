@@ -33,3 +33,25 @@ export const toHls = async (src: string, outDir: string) => {
     "-hls_segment_filename", path.join(outDir, "seg_%04d.ts"), path.join(outDir, "index.m3u8"),
   ]);
 };
+
+/** Mono 16 kHz 32 kbps mp3: ~14 MB/hour, so Whisper's 25 MB cap allows ~100 min. */
+export const extractAudio = (src: string, out: string) =>
+  run("ffmpeg", ["-y", "-i", src, "-vn", "-ac", "1", "-ar", "16000", "-b:a", "32k", out]);
+
+export const frameTimes = (duration: number, count = 12) =>
+  Array.from({ length: count }, (_, i) => duration * (0.05 + (0.9 * i) / Math.max(1, count - 1)));
+
+export const frameAt = (src: string, t: number, out: string, width: number) =>
+  run("ffmpeg", ["-y", "-ss", t.toFixed(2), "-i", src, "-frames:v", "1", "-vf", `scale=${width}:-2`, "-q:v", "2", out]);
+
+/** Evenly spaced jpg frames (640 px wide), skipping the first/last 5%. Returns file paths. */
+export const sampleFrames = async (src: string, duration: number, outDir: string, count = 12) => {
+  fs.mkdirSync(outDir, { recursive: true });
+  const files: string[] = [];
+  for (const [i, t] of frameTimes(duration, count).entries()) {
+    const f = path.join(outDir, `frame_${String(i).padStart(2, "0")}.jpg`);
+    await frameAt(src, t, f, 640);
+    files.push(f);
+  }
+  return files;
+};

@@ -7,6 +7,8 @@ import { ErrorMiddleware } from "./middleware/error";
 import userRouter from "./routes/user.route";
 import authRouter from "./routes/auth.route";
 import reviewRouter from "./routes/review.route";
+import publishKitRouter from "./routes/publishkit.route";
+import { startKitWorker } from "./jobs/publishKit";
 import http from "http";
 import { allowedOrigins } from "./config/env";
 
@@ -58,6 +60,7 @@ cloudinary.config({
 app.use("/v1/auth/", authRouter);
 app.use("/v1/users/", userRouter);
 app.use("/v1/", reviewRouter);
+app.use("/v1/", publishKitRouter);
 
 app.get("/", (req: Request, res: Response) => {
   return res.send("Express Typescript on Vercel");
@@ -77,4 +80,5 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}!`);
   connectDB();
+  startKitWorker();
 });

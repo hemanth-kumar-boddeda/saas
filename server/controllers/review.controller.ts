@@ -23,7 +23,7 @@ const oid = (v: string, what = "Resource") => {
   if (!mongoose.isValidObjectId(v)) throw new ErrorHandler(404, `${what} not found`);
   return v;
 };
-const parse = <T extends z.ZodTypeAny>(schema: T, data: unknown): z.infer<T> => {
+export const parse = <T extends z.ZodTypeAny>(schema: T, data: unknown): z.infer<T> => {
   const r = schema.safeParse(data);
   if (!r.success) throw new ErrorHandler(422, r.error.issues[0]?.message || "Invalid input");
   return r.data;
