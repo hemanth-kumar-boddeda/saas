@@ -54,7 +54,10 @@ const commentSchema = new Schema(
     version: { ...ref("ProjectVersion"), index: true },
     parentId: { type: Schema.Types.ObjectId, ref: "ReviewComment", default: null },
     timecode: { type: Number, required: true, min: 0 },
-    body: { type: String, required: true, maxlength: 2000 },
+    // Text is optional when the comment is a voice note.
+    body: { type: String, required: function (this: any) { return !this.audioKey; }, maxlength: 2000, default: "" },
+    audioKey: String, // private path under STORAGE_DIR, never sent to clients
+    audioDuration: Number,
     status: { type: String, enum: ["open", "resolved"], default: "open" },
     // Either a user or a named guest (guestName + link).
     author: { type: Schema.Types.ObjectId, ref: "User" },

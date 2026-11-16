@@ -27,6 +27,10 @@ export const reviewApi = apiSlice.injectEndpoints({
       query: ({ id, vid, ...body }) => ({ url: `projects/${id}/versions/${vid}/comments`, method: "POST", body }),
       invalidatesTags: ["Comments"],
     }),
+    addVoiceComment: b.mutation<any, { id: string; vid: string; form: FormData }>({
+      query: ({ id, vid, form }) => ({ url: `projects/${id}/versions/${vid}/voice-comments`, method: "POST", body: form }),
+      invalidatesTags: ["Comments"],
+    }),
     setCommentStatus: b.mutation<any, { id: string; cid: string; status: "open" | "resolved" }>({
       query: ({ id, cid, status }) => ({ url: `projects/${id}/comments/${cid}/status`, method: "PATCH", body: { status } }),
       invalidatesTags: ["Comments"],
@@ -111,7 +115,7 @@ export const reviewApi = apiSlice.injectEndpoints({
 
 export const {
   useListProjectsQuery, useCreateProjectMutation, useGetProjectQuery, useAddVersionMutation, useStreamUrlQuery,
-  useListCommentsQuery, useAddCommentMutation, useSetCommentStatusMutation, useDecideMutation, useApprovalsQuery,
+  useListCommentsQuery, useAddCommentMutation, useAddVoiceCommentMutation, useSetCommentStatusMutation, useDecideMutation, useApprovalsQuery,
   useCreateLinkMutation, useListLinksQuery, useRevokeLinkMutation, useEnterLinkMutation,
   useGetKitQuery, useSetBriefMutation, useAddReferenceMutation, useDeleteReferenceMutation, useReferenceStreamQuery, useInviteEditorMutation, useSendFeedbackMutation, useLinkInfoQuery, useAddEditorMutation, useStartKitMutation, useEditKitMutation, useListChannelsQuery, useCreateChannelMutation, useSetProjectChannelMutation,
   useListAccountsQuery, useConnectAccountMutation, useDisconnectAccountMutation, usePublishMutation, useListPublicationsQuery,

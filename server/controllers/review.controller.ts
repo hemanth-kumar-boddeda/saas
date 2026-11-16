@@ -16,7 +16,7 @@ import {
 import { hashToken, newLinkToken, signGuestToken, signStreamToken, verifyStreamToken } from "../utils/reviewTokens";
 import { notifyProject, mailLink, reviewLinkUrl } from "../utils/notify";
 import { decrypt, encrypt } from "../services/publishLogic";
-import { probeDuration, toHls } from "../utils/transcode";
+import { probeDuration, toHls, probeAudioDuration, toVoiceM4a } from "../utils/transcode";
 import { resolveKey, versionDir, storageRoot } from "../utils/storage";
 import { logger } from "../utils/logger";
 import { autoStartKit } from "../jobs/autoKit";
@@ -161,6 +161,7 @@ export const serveStream = CatchAsyncError(async (req: Request, res: Response) =
 const commentJson = (c: any) => ({
   _id: c._id, version: c.version, parentId: c.parentId, timecode: c.timecode, body: c.body, status: c.status,
   authorName: c.guestName || c.authorName || "User", authorKey: c.authorKey, createdAt: c.createdAt, draft: !!c.draft,
+  audioUrl: c.audioKey ? `/v1/voice/${c._id}?t=${signStreamToken(String(c._id))}` : undefined, audioDuration: c.audioDuration,
 });
 
 export const listComments = CatchAsyncError(async (req: Request, res: Response) => {
@@ -404,7 +405,7 @@ export const sendFeedback = CatchAsyncError(async (req: Request, res: Response) 
   if (!(a.project.editorInvites ?? []).length && !(a.project.editors ?? []).length) throw new ErrorHandler(409, "Invite your editor first so they receive the feedback");
   await ReviewComment.updateMany({ version: v._id, authorKey: a.key, draft: true }, { draft: false });
   if (a.project.status === "in_review") await Project.updateOne({ _id: a.project._id }, { status: "changes_requested" });
-  const lines = drafts.map((d) => `${Math.floor(d.timecode / 60)}:${String(Math.floor(d.timecode % 60)).padStart(2, "0")}  ${d.body}`).join("\n");
+  const lines = drafts.map((d) => `${Math.floor(d.timecode / 60)}:${String(Math.floor(d.timecode % 60)).padStart(2, "0")}  ${d.audioKey ? `[voice note ${Math.round(d.audioDuration || 0)}s]${d.body ? " " + d.body : ""}` : d.body}`).join("\n");
   let sent = 0;
   for (const inv of a.project.editorInvites ?? []) {
     const link: any = await ReviewLink.findById(inv.linkId);
@@ -414,4 +415,61 @@ export const sendFeedback = CatchAsyncError(async (req: Request, res: Response) 
   }
   void notifyProject({ project: a.project, exceptUserId: a.userId, subject: `Feedback on ${a.project.title}`, heading: `${drafts.length} change${drafts.length === 1 ? "" : "s"} requested`, body: lines });
   res.json({ success: true, count: drafts.length, emailed: sent });
+});
+
+// ---- voice notes ----
+export const MAX_VOICE_SECONDS = 180;
+
+/** A spoken comment at an exact time. Same rules as text comments (owner's stay drafts until sent). */
+export const addVoiceComment = CatchAsyncError(async (req: Request, res: Response) => {
+  const a = req.actor!;
+  const file = req.file;
+  const cleanup = () => file && fs.promises.unlink(file.path).catch(() => {});
+  try {
+    assertCan(a.role, "comment");
+    if (!file) throw new ErrorHandler(422, "Record or upload a voice note");
+    const v = await getVersion(String(a.project._id), req.params.vid);
+    const input = parse(z.object({ timecode: z.coerce.number().finite().min(0), parentId: z.string().optional(), body: z.string().trim().max(2000).optional() }), req.body);
+    const parent: any = input.parentId && mongoose.isValidObjectId(input.parentId) ? await ReviewComment.findById(input.parentId) : null;
+    validateNewComment({ body: input.body || "voice", timecode: input.timecode, parentId: input.parentId }, { _id: String(v._id), duration: v.duration },
+      parent && { _id: String(parent._id), versionId: String(parent.version), parentId: parent.parentId && String(parent.parentId), timecode: parent.timecode, status: parent.status, authorKey: parent.authorKey });
+    let duration: number;
+    try { duration = await probeAudioDuration(file.path); } catch { throw new ErrorHandler(422, "That file is not playable audio"); }
+    if (duration > MAX_VOICE_SECONDS) throw new ErrorHandler(422, `Voice notes can be at most ${MAX_VOICE_SECONDS / 60} minutes`);
+    // Audio first, so the comment is saved with its audio path in one step (text is optional only with audio).
+    const _id = new mongoose.Types.ObjectId();
+    const dir = path.join(storageRoot(), "projects", String(a.project._id), "voice");
+    fs.mkdirSync(dir, { recursive: true });
+    const out = path.join(dir, `${_id}.m4a`);
+    await toVoiceM4a(file.path, out);
+    let c: any;
+    try {
+      c = await ReviewComment.create({
+        _id, project: a.project._id, version: v._id, parentId: parent?._id ?? null,
+        timecode: parent ? parent.timecode : input.timecode, body: input.body || "", author: a.userId,
+        guestName: a.userId ? undefined : a.name, authorKey: a.key, draft: a.role === "owner", audioDuration: duration,
+        audioKey: path.relative(storageRoot(), out),
+      });
+    } catch (e) {
+      await fs.promises.unlink(out).catch(() => {});
+      throw e;
+    }
+    if (!c.draft) void notifyProject({
+      project: a.project, exceptUserId: a.userId, subject: `New voice note on ${a.project.title}`,
+      heading: "New voice note", body: `${a.name} left a voice note at ${Math.floor(c.timecode)}s. Open the review to listen.`,
+    });
+    res.status(201).json({ success: true, comment: commentJson({ ...c.toObject(), authorName: a.name }) });
+  } finally {
+    await cleanup();
+  }
+});
+
+/** Serves a voice note for a valid signed token. Range requests work (sendFile). */
+export const serveVoice = CatchAsyncError(async (req: Request, res: Response) => {
+  const { cid } = req.params;
+  if (!mongoose.isValidObjectId(cid) || !verifyStreamToken(req.query.t, cid)) throw new ErrorHandler(403, "Invalid or expired link");
+  const c: any = await ReviewComment.findById(cid);
+  if (!c?.audioKey) throw new ErrorHandler(404, "Not found");
+  res.setHeader("Cache-Control", "private, no-store");
+  res.type("audio/mp4").sendFile(resolveKey(c.audioKey));
 });

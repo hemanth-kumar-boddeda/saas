@@ -6,9 +6,10 @@ import Player, { PlayerHandle } from "./Player";
 import PublishKit from "./PublishKit";
 import YouTubePlayer, { youtubeId } from "./YouTubePlayer";
 import Brief from "./Brief";
+import VoiceRecorder, { VoicePlayer } from "./VoiceNote";
 import { InstagramEmbed, instagramId } from "./Embed";
 import {
-  errMsg, useAddCommentMutation, useInviteEditorMutation, useSendFeedbackMutation, useAddVersionMutation, useApprovalsQuery, useCreateLinkMutation, useDecideMutation,
+  errMsg, useAddCommentMutation, useAddVoiceCommentMutation, useInviteEditorMutation, useSendFeedbackMutation, useAddVersionMutation, useApprovalsQuery, useCreateLinkMutation, useDecideMutation,
   useGetProjectQuery, useListCommentsQuery, useListLinksQuery, useRevokeLinkMutation, useSetCommentStatusMutation,
   useStreamUrlQuery,
 } from "../../../redux/features/review/reviewApi";
@@ -212,10 +213,12 @@ function Thread({ c, replies, projectId, vid, role, seek }: any) {
         {c.draft && <span className="cf-badge border-amber-500/30 bg-amber-500/10 text-amber-300">Draft, not sent</span>}
         {c.status === "resolved" && <span className="text-green-300">resolved</span>}
       </div>
-      <p className="text-sm whitespace-pre-wrap break-words">{c.body}</p>
+      {c.body && <p className="text-sm whitespace-pre-wrap break-words">{c.body}</p>}
+      {c.audioUrl && <VoicePlayer url={c.audioUrl} seconds={c.audioDuration} />}
       {replies.map((r: any) => (
         <p key={r._id} className="text-sm ml-3 mt-1 pl-2 border-l border-cf-line">
           <span className="text-xs text-cf-muted">{r.authorName}: </span>{r.body}
+          {r.audioUrl && <VoicePlayer url={r.audioUrl} seconds={r.audioDuration} />}
         </p>
       ))}
       <div className="flex gap-3 mt-1 text-xs">
@@ -249,6 +252,16 @@ function NewComment({ projectId, vid, now, manual, duration, onFocus }: any) {
   const [body, setBody] = useState("");
   const [time, setTime] = useState("0:00");
   const [add, { isLoading }] = useAddCommentMutation();
+  const [addVoice, { isLoading: sendingVoice }] = useAddVoiceCommentMutation();
+  const sendVoice = async (blob: Blob) => {
+    const t = manual ? parseTime(time) : now;
+    if (Number.isNaN(t)) return void toast.error("Enter time as m:ss");
+    const form = new FormData();
+    form.append("audio", blob, "voice-note");
+    form.append("timecode", String(t));
+    if (body.trim()) form.append("body", body.trim());
+    try { await addVoice({ id: projectId, vid, form }).unwrap(); setBody(""); toast.success("Voice note added"); } catch (er) { toast.error(errMsg(er)); }
+  };
   return (
     <form
       className="mt-3 space-y-2"
@@ -272,6 +285,7 @@ function NewComment({ projectId, vid, now, manual, duration, onFocus }: any) {
       </div>
       <textarea className={input} rows={2} maxLength={2000} value={body} onChange={(e) => setBody(e.target.value)} placeholder="Pause the video, then write your note for this exact moment" onFocus={onFocus} />
       <button className={`${btnPrimary} w-full`} disabled={isLoading || !body.trim()}>{manual ? "Add comment" : `Comment at ${fmt(now)}`}</button>
+      <VoiceRecorder onStart={onFocus} onSend={sendVoice} sending={sendingVoice} label={manual ? "Record voice note" : `Record voice note at ${fmt(now)}`} />
     </form>
   );
 }

@@ -28,6 +28,23 @@ const uploadMw: express.RequestHandler = (req, res, next) =>
     err?.code === "LIMIT_FILE_SIZE" ? next(new ErrorHandler(413, `File is larger than ${MAX_MB} MB`)) : next(err)
   );
 
+const VOICE_MB = 10;
+const voiceUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_r, _f, cb) => cb(null, tmpDir()),
+    filename: (_r, _f, cb) => cb(null, crypto.randomBytes(16).toString("hex")),
+  }),
+  limits: { fileSize: VOICE_MB * 1024 * 1024, files: 1 },
+  fileFilter: (_r, f, cb) =>
+    /^(audio|video)\/(webm|ogg|mp4|mpeg|mp3|wav|x-wav|aac|x-m4a|m4a)/.test(f.mimetype)
+      ? cb(null, true)
+      : cb(new ErrorHandler(415, "Upload an audio recording (webm, ogg, mp4, mp3, wav or m4a)")),
+});
+const voiceMw: express.RequestHandler = (req, res, next) =>
+  voiceUpload.single("audio")(req, res, (err: any) =>
+    err?.code === "LIMIT_FILE_SIZE" ? next(new ErrorHandler(413, `Voice note is larger than ${VOICE_MB} MB`)) : next(err)
+  );
+
 const r = express.Router();
 const member = projectAccess();
 const any = projectAccess({ allowGuest: true });
@@ -45,6 +62,8 @@ r.post("/projects/:id/versions", any, uploadMw, c.addVersion); // invited editor
 r.get("/projects/:id/versions/:vid/stream-url", any, c.streamUrl);
 r.get("/projects/:id/versions/:vid/comments", any, c.listComments);
 r.post("/projects/:id/versions/:vid/comments", any, c.addComment);
+r.post("/projects/:id/versions/:vid/voice-comments", any, voiceMw, c.addVoiceComment);
+r.get("/voice/:cid", c.serveVoice);
 r.patch("/projects/:id/comments/:cid/status", member, c.setCommentStatus);
 
 r.put("/projects/:id/brief", member, c.setBrief);

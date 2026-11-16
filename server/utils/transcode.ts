@@ -60,3 +60,15 @@ export const sampleFrames = async (src: string, duration: number, outDir: string
 export const toMp4 = (src: string, out: string) =>
   run("ffmpeg", ["-y", "-i", src, "-vf", "scale='min(1080,iw)':-2", "-c:v", "libx264", "-preset", "veryfast", "-crf", "23",
     "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", out]);
+
+/** Duration of an audio-only file in seconds; throws when it is not playable audio. */
+export const probeAudioDuration = async (file: string): Promise<number> => {
+  const out = await run("ffprobe", ["-v", "error", "-select_streams", "a:0", "-show_entries", "format=duration", "-of", "csv=p=0", file]);
+  const d = parseFloat(out.trim());
+  if (!Number.isFinite(d) || d <= 0) throw new Error("not audio");
+  return d;
+};
+
+/** Voice note -> AAC m4a (plays in every browser). Mono, 48 kbps is plenty for speech. */
+export const toVoiceM4a = (src: string, out: string) =>
+  run("ffmpeg", ["-y", "-i", src, "-vn", "-ac", "1", "-c:a", "aac", "-b:a", "48k", "-movflags", "+faststart", out]);
