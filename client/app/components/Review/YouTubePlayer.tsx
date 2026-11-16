@@ -38,6 +38,7 @@ const YouTubePlayer = forwardRef<PlayerHandle, { videoId: string; onTime?: (t: n
       seek: (t) => player.current?.seekTo?.(t, true),
       time: () => player.current?.getCurrentTime?.() ?? 0,
       pause: () => player.current?.pauseVideo?.(),
+      play: () => player.current?.playVideo?.(),
     }));
     useEffect(() => {
       let timer: any;

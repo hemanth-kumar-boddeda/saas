@@ -6,6 +6,7 @@ export interface PlayerHandle {
   seek: (t: number) => void;
   time: () => number;
   pause: () => void;
+  play: () => void;
 }
 
 const apiOrigin = () => {
@@ -17,7 +18,7 @@ const apiOrigin = () => {
 };
 
 /** Streaming-only player: no download control, no context menu. Deters casual saving only. */
-const Player = forwardRef<PlayerHandle, { src: string; onTime?: (t: number) => void }>(({ src, onTime }, ref) => {
+const Player = forwardRef<PlayerHandle, { src: string; onTime?: (t: number) => void; muted?: boolean }>(({ src, onTime, muted }, ref) => {
   const video = useRef<HTMLVideoElement>(null);
   useImperativeHandle(ref, () => ({
     seek: (t) => {
@@ -25,6 +26,7 @@ const Player = forwardRef<PlayerHandle, { src: string; onTime?: (t: number) => v
     },
     time: () => video.current?.currentTime ?? 0,
     pause: () => video.current?.pause(),
+    play: () => void video.current?.play().catch(() => {}),
   }));
 
   useEffect(() => {
@@ -45,6 +47,7 @@ const Player = forwardRef<PlayerHandle, { src: string; onTime?: (t: number) => v
       ref={video}
       controls
       playsInline
+      muted={muted}
       controlsList="nodownload noremoteplayback"
       disablePictureInPicture
       onContextMenu={(e) => e.preventDefault()}

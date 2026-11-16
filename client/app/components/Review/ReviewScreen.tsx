@@ -6,6 +6,7 @@ import Player, { PlayerHandle } from "./Player";
 import PublishKit from "./PublishKit";
 import YouTubePlayer, { youtubeId } from "./YouTubePlayer";
 import Brief from "./Brief";
+import Compare from "./Compare";
 import { AnnotationView, DrawLayer, Stroke } from "./Annotation";
 import VoiceRecorder, { VoicePlayer } from "./VoiceNote";
 import { InstagramEmbed, instagramId } from "./Embed";
@@ -60,6 +61,7 @@ export default function ReviewScreen({ projectId, guest }: { projectId: string; 
   const role: string = project?.role || "guest";
   const isLatest = version && version.number === project?.currentVersion;
 
+  const [comparing, setComparing] = useState(false);
   const [status, setStatus] = useState("");
   const [mine, setMine] = useState(false);
   const player = useRef<PlayerHandle>(null);
@@ -115,10 +117,15 @@ export default function ReviewScreen({ projectId, guest }: { projectId: string; 
               <option key={v._id} value={v._id}>Version {v.number}{v.number === project.currentVersion ? " (latest)" : ""}</option>
             ))}
           </select>
+          {versions.filter((v) => v.kind === "upload" && v.processing === "ready").length >= 2 && (
+            <button className="cf-btn cf-btn-secondary text-sm" onClick={() => setComparing(!comparing)} aria-pressed={comparing}>Compare versions</button>
+          )}
         </div>
         <h1 className="cf-hero-gradient mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">{project.title}</h1>
         {!guest && <Stepper status={project.status} />}
       </header>
+
+      {comparing && <Compare projectId={projectId} versions={versions} onClose={() => setComparing(false)} />}
 
       <Brief projectId={projectId} role={role} brief={project.brief || ""} references={project.references || []} />
 
