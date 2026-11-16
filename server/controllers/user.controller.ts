@@ -156,7 +156,7 @@ export const activeUser = CatchAsyncError(
         return next(new ErrorHandler(400,"Email already exists"));
       }
       const user = await userModel.create({ name, email, password });
-      res.status(201).json({ success: true, user });
+      res.status(201).json({ success: true, user: toSafeUser(user) });
     } catch (err: any) {
       return next(new ErrorHandler(400,err.message));
     }

@@ -17,3 +17,9 @@ coverage/
 !.env.example
 
 storage/
+
+# secrets & local data
+.env
+.env.*
+!.env.example
+server/storage/
