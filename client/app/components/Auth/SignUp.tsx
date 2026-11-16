@@ -1,167 +1,62 @@
+'use client'
 import React, { FC, useEffect, useState } from 'react';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { AiOutlineEye, AiOutlineEyeInvisible } from 'react-icons/ai';
-import { styles } from '../../../app/styles/style';
 import { useRegisterMutation } from '@/redux/features/auth/authApi';
-import GoogleAuthButton from './GoogleAuthButton';
-import toast from 'react-hot-toast';
-import Verification from '../../../app/components/Auth/Verification';
+import { toast } from 'react-toastify';
 
-type Props = {
-    setRoute: (route: string) => void;
-    setOpen?: (open: boolean) => void;
-    title?: string;
-};
+type Props = { onRegistered: () => void };
 
 const schema = Yup.object().shape({
-    name: Yup.string().required("Please enter your name!"),
-    email: Yup.string().email('Invalid email!').required("Please enter your email"),
-    password: Yup.string().required("Please enter your password").min(6),
+  name: Yup.string().trim().required('Enter your name'),
+  email: Yup.string().email('Enter a valid email').required('Enter your email'),
+  password: Yup.string().required('Choose a password').min(6, 'At least 6 characters'),
 });
 
-const SignUp: FC<Props> = ({ setRoute, setOpen, title = "Create your CreatorFlow account" }) => {
-    const [show, setShow] = useState(false);
-    const [isRegistered, setIsRegistered] = useState(false);
-    const [register, { data, error, isSuccess }] = useRegisterMutation();
+const SignUp: FC<Props> = ({ onRegistered }) => {
+  const [show, setShow] = useState(false);
+  const [register, { data, error, isSuccess, isLoading }] = useRegisterMutation();
 
-    useEffect(() => {
-        if (isSuccess) {
-            const message = data?.message || " Registered successfully";
-            toast.success(message);
-            setRoute("Verification");
-        }
-        if(error){
-            if('data' in error){
-                const errorData = error as any;
-                toast.error(errorData.data.message);
-            }
-        }
-    },[isSuccess, error] )
-    const formik = useFormik({
-        initialValues: {
-            name: "",
-            email: "",
-            password: ""
-        },
-        validationSchema: schema,
-        onSubmit: async ({ name, email, password }) => {
-            const data = { name, email, password };
-            await register(data);
-          
-        }
-    });
+  useEffect(() => {
+    if (isSuccess) { toast.success(data?.message || 'Check your email for the code'); onRegistered(); }
+    if (error) toast.error((error as any)?.data?.message || 'Could not sign up. Try again.');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSuccess, error]);
 
-    const { errors, touched, values, handleChange, handleSubmit } = formik;
+  const formik = useFormik({
+    initialValues: { name: '', email: '', password: '' },
+    validationSchema: schema,
+    onSubmit: async (v) => { await register(v); },
+  });
+  const { errors, touched, values, handleChange, handleBlur, handleSubmit } = formik;
+  const err = (k: 'name' | 'email' | 'password') => errors[k] && touched[k] && <p role="alert" className="mt-1 text-xs text-red-300">{errors[k]}</p>;
 
-    
-
-    return (
-        <div className="w-full text-black dark:text-white w- [95%]  800px:w-[92%] m-auto">
-            {isRegistered ? (
-                <Verification setRoute={setRoute} />
-            ) : (
-                <>
-                    <h1 className={styles.title}>
-                        {title}
-                    </h1>
-                    <form onSubmit={handleSubmit}>
-                        <div className="mb-3">
-                            <label className={`${styles.label}`} htmlFor="name">
-                                Enter your Name
-                            </label>
-                            <input
-                                type="text"
-                                name="name"
-                                value={values.name}
-                                onChange={handleChange}
-                                id="name"
-                                placeholder="Harkirat Singh"
-                                className={`${errors.name && touched.name && "border-red-500"} ${styles.input}`}
-                            />
-                            {errors.name && touched.name && (
-                                <span className="text-red-500 pt-2 block">{errors.name}</span>
-                            )}
-                        </div>
-                        <label className={`{styles.label}`} htmlFor="email">
-                            Enter your Email
-                        </label>
-                        <input
-                            type="email"
-                            name="email"
-                            value={values.email}
-                            onChange={handleChange}
-                            id="email"
-                            placeholder="loginmail@gmail.com"
-                            className={`${errors.email && touched.email && "border-red-500"} ${styles.input}`}
-                        />
-                        {errors.email && touched.email && (
-                            <span className="text-red-500 pt-2 block">{errors.email}</span>
-                        )}
-                        <div className="w-full mt-5 relative mb-1 ">
-                            <label className={styles.label} htmlFor="password">
-                                Enter your Password
-                            </label>
-                            <input
-                                type={show ? "text" : "password"}
-                                name="password"
-                                value={values.password}
-                                onChange={handleChange}
-                                id="password"
-                                placeholder="password!@%"
-                                className={`${errors.password && touched.password && "border-red-500"} ${styles.input}`}
-                            />
-                            {!show ? (
-                                <AiOutlineEyeInvisible
-                                    className="absolute bottom-3 right-2 z-1 cursor-pointer"
-                                    size={20}
-                                    onClick={() => setShow(true)}
-                                />
-                            ) : (
-                                <AiOutlineEye
-                                    className="absolute bottom-3 right-2 z-1 cursor-pointer"
-                                    size={20}
-                                    onClick={() => setShow(false)}
-                                />
-                            )}
-                            {errors.password && touched.password && (
-                                <span className="text-red-500 pt-2 block">{errors.password}</span>
-                            )}
-                        </div>
-                        <div className="w-full mt-5">
-                            <input
-                                type="submit"
-                                value="Sign Up"
-                                className={`${styles.button}`}
-                            />
-                        </div>
-                        {/* SEC-01: Google sign-in also creates the account when the
-                            provider-verified e-mail is new, so it doubles as sign-up. */}
-                        <h5 className="text-center pt-4 font-Poppins text-[14px]">
-                            Or join with
-                        </h5>
-                        <div className="flex items-center justify-center my-3">
-                            <GoogleAuthButton
-                                onSuccess={() => {
-                                    toast.success("Account created, signed in with Google");
-                                    setOpen?.(false);
-                                }}
-                            />
-                        </div>
-                        <h5 className="text-center pt-4 font-Poppins text-[14px]">
-                            Already have an account?{" "}
-                            <span
-                                className="text-[#2190ff] cursor-pointer pl-1"
-                                onClick={() => setRoute("Login")}
-                            >
-                                Sign in
-                            </span>
-                        </h5>
-                    </form>
-                </>
-            )}
+  return (
+    <form onSubmit={handleSubmit} noValidate className="space-y-4">
+      <div>
+        <label className="mb-1 block text-sm text-cf-muted" htmlFor="name">Name</label>
+        <input id="name" name="name" autoComplete="name" placeholder="Your name" className="cf-input" value={values.name} onChange={handleChange} onBlur={handleBlur} />
+        {err('name')}
+      </div>
+      <div>
+        <label className="mb-1 block text-sm text-cf-muted" htmlFor="email">Email</label>
+        <input id="email" name="email" type="email" autoComplete="email" placeholder="you@studio.com" className="cf-input" value={values.email} onChange={handleChange} onBlur={handleBlur} />
+        {err('email')}
+      </div>
+      <div>
+        <label className="mb-1 block text-sm text-cf-muted" htmlFor="password">Password</label>
+        <div className="relative">
+          <input id="password" name="password" type={show ? 'text' : 'password'} autoComplete="new-password" placeholder="At least 6 characters" className="cf-input pr-10" value={values.password} onChange={handleChange} onBlur={handleBlur} />
+          <button type="button" aria-label={show ? 'Hide password' : 'Show password'} className="absolute inset-y-0 right-3 text-cf-muted hover:text-cf-text" onClick={() => setShow(!show)}>
+            {show ? <AiOutlineEye size={18} /> : <AiOutlineEyeInvisible size={18} />}
+          </button>
         </div>
-    );
-}
+        {err('password')}
+      </div>
+      <button type="submit" className="cf-btn cf-btn-primary w-full py-2.5" disabled={isLoading}>{isLoading ? 'Creating account…' : 'Create account'}</button>
+    </form>
+  );
+};
 
 export default SignUp;

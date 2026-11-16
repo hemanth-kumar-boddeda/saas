@@ -1,125 +1,53 @@
+'use client'
 import React, { FC, useEffect, useRef, useState } from 'react';
-import { toast } from 'react-hot-toast';
-import { VscWorkspaceTrusted } from 'react-icons/vsc';
+import { toast } from 'react-toastify';
 import { useSelector } from 'react-redux';
 import { useActivationMutation } from '@/redux/features/auth/authApi';
-import { styles } from '../../../app/styles/style';
 
-type Props = {
-  setRoute: (route: string) => void;
-};
-
-type VerifyNumber = {
-  "0": string;
-  "1": string;
-  "2": string;
-  "3": string;
-};
-
-const Verification: FC<Props> = ({ setRoute }) => {
+const Verification: FC<{ onVerified: () => void }> = ({ onVerified }) => {
   const { token } = useSelector((state: any) => state.auth);
-
-  const [activation, { isSuccess, error }] = useActivationMutation();
-  const [invalidError, setInvalidError] = useState<boolean>(false);
-
- 
+  const [activation, { isSuccess, isLoading, error }] = useActivationMutation();
+  const [digits, setDigits] = useState(['', '', '', '']);
+  const [bad, setBad] = useState(false);
+  const refs = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
-    if (isSuccess) {
-      toast.success('Account Activated successfully');
-      setRoute("Login");
-    }
-    if (error) {
-      if ("data" in error) {
-        const errorData = error as any;
-        toast.error(errorData.data.message);
-        setInvalidError(true);
-      } else {
-        console.log('Something went wrong', error);
-      }
-    }
+    if (isSuccess) { toast.success('Account activated. Sign in to continue.'); onVerified(); }
+    if (error) { toast.error((error as any)?.data?.message || 'Could not verify'); setBad(true); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSuccess, error]);
 
-  const inputRefs = [
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-  ];
-
-  const [verifyNumber, setVerifyNumber] = useState<VerifyNumber>({
-    "0": "",
-    "1": "",
-    "2": "",
-    "3": "",
-  });
-
-  const verificationHandler = async () => {
-
-    const verificationNumber = Object.values(verifyNumber).join('');
-    if (verificationNumber.length !== 4) {
-      setInvalidError(true);
-      return;              
-    }
-    await activation({
-      active_code: verificationNumber,
-      active_token: token,
-    });
+  const set = (i: number, v: string) => {
+    const d = v.replace(/\D/g, '').slice(-1);
+    setBad(false);
+    setDigits((p) => p.map((x, j) => (j === i ? d : x)));
+    if (d && i < 3) refs.current[i + 1]?.focus();
   };
-
-
-
-  const handleInputChange = (index: number, value: string) => {
-    setInvalidError(false);
-    const newVerifyNumber = { ...verifyNumber, [index]: value };
-    setVerifyNumber(newVerifyNumber);
-    if (value === " " && index > 0) {
-      inputRefs[index - 1].current?.focus();
-    } else if (value.length === 1 && index < 3) {
-      inputRefs[index + 1].current?.focus();
-    }
+  const paste = (e: React.ClipboardEvent) => {
+    const t = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 4);
+    if (t.length === 4) { e.preventDefault(); setDigits(t.split('')); refs.current[3]?.focus(); }
+  };
+  const submit = () => {
+    const code = digits.join('');
+    if (code.length !== 4) return setBad(true);
+    if (!token) return toast.error('Session expired. Go back and sign up again.');
+    activation({ active_code: code, active_token: token });
   };
 
   return (
     <div>
-      <h1 className={`${styles.title}`}>Verify Your Account</h1>
-      <br />
-      <div className="w-full flex items-center justify-center mt-2">
-        <div className="w-[80px] h-[80px] rounded-full bg-[#497DF2] flex items-center justify-center">
-          <VscWorkspaceTrusted size={40} />
-        </div>
-      </div>
-      
-      <div className="m-auto flex items-center justify-around">
-        {Object.keys(verifyNumber).map((key, index) => (
-          <input type="number"
-            key={key}
-            ref={inputRefs[index]}
-            className={`w-[65px] h-[65px] bg-transparent border-[3px] rounded-[10px] flex items-center text-black dark:text-white justify-center text-[18px] font-Poppins outline-none text-center ${
-              invalidError
-              ? "shake border-red-500"
-              :"dark:border-white border-[#0000004a]"
-            }`}
-            placeholder=""
-            maxLength={1}
-            value={verifyNumber[key as keyof VerifyNumber]}
-            onChange={(e) => handleInputChange(index, e.target.value)}
+      <div className="flex justify-between gap-3" onPaste={paste}>
+        {digits.map((d, i) => (
+          <input
+            key={i} ref={(el) => { refs.current[i] = el; }} inputMode="numeric" autoComplete="one-time-code" aria-label={`Digit ${i + 1}`}
+            className={`cf-input h-16 text-center text-2xl ${bad ? 'shake !border-red-400' : ''}`} value={d}
+            onChange={(e) => set(i, e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Backspace' && !d && i > 0) refs.current[i - 1]?.focus(); if (e.key === 'Enter') submit(); }}
           />
         ))}
       </div>
-     
-      <div className="w-full flex justify-center">
-        <button className={`${styles.button}`} onClick={verificationHandler}>
-          Verify OTP
-        </button>
-      </div>
-      <br />
-      <h5 className="text-center pt-4 font-Poppins text-[14px] text-black dark:text-white">
-        Go back to Sign In?
-        <span className="text-[#2190ff] pl-1 cursor-pointer" onClick={() => setRoute('Login')}>
-          Sign In
-        </span>
-      </h5>
+      {bad && <p role="alert" className="mt-2 text-xs text-red-300">Enter the 4 digit code from your email.</p>}
+      <button className="cf-btn cf-btn-primary mt-5 w-full py-2.5" onClick={submit} disabled={isLoading}>{isLoading ? 'Verifying…' : 'Verify and activate'}</button>
     </div>
   );
 };

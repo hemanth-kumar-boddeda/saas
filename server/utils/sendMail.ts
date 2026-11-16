@@ -11,6 +11,11 @@ interface EmailOptions {
 }
 
 const sendEmail = async (options: EmailOptions) => {
+    // Local dev without SMTP: print the mail data (activation code) instead of failing.
+    if (!process.env.SMTP_HOST && !process.env.SMTP_SERVICE && process.env.NODE_ENV !== 'production') {
+        console.log(`[dev mail] to=${options.email} subject="${options.subject}"`, options.data);
+        return;
+    }
     const transporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST,
         port: parseInt(process.env.SMTP_PORT || '587'),

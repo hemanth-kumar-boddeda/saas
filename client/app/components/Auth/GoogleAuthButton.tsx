@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import toast from "react-hot-toast";
+import { toast } from "react-toastify";
 import { useSocialAuthMutation } from "@/redux/features/auth/authApi";
 
 type Props = {

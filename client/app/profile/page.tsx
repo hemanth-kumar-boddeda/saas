@@ -1,7 +1,8 @@
 "use client";
 import React, { useState } from "react";
 import { toast } from "react-toastify";
-import Protected from "../hooks/useProtected";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { useLoadUserQuery } from "../../redux/features/api/apiSlice";
 import { useUpdatePasswordMutation } from "../../redux/features/user/userApi";
 import { errMsg, useDisconnectAccountMutation, useListAccountsQuery } from "../../redux/features/review/reviewApi";
@@ -9,8 +10,10 @@ import { errMsg, useDisconnectAccountMutation, useListAccountsQuery } from "../.
 const NAMES: Record<string, string> = { youtube: "YouTube", instagram: "Instagram" };
 
 export default function ProfilePage() {
-  const { data } = useLoadUserQuery(undefined, {});
+  const router = useRouter();
+  const { data, isLoading: loadingUser, isError } = useLoadUserQuery(undefined, {});
   const user = data?.user;
+  useEffect(() => { if (isError) router.replace("/login"); }, [isError, router]);
   const { data: acc } = useListAccountsQuery();
   const [disconnect] = useDisconnectAccountMutation();
   const [update, { isLoading }] = useUpdatePasswordMutation();
@@ -33,10 +36,10 @@ export default function ProfilePage() {
   );
 
   return (
-    <Protected>
+    <>
       <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
         <span className="cf-chip cf-rise">Account</span>
-        <h1 className="cf-hero-gradient cf-rise mt-3 text-4xl font-semibold tracking-tight" style={{ "--i": 1 } as React.CSSProperties}>{user?.name || "Profile"}</h1>
+        <h1 className="cf-hero-gradient cf-rise mt-3 text-4xl font-semibold tracking-tight" style={{ "--i": 1 } as React.CSSProperties}>{loadingUser ? "Loading…" : user?.name || "Profile"}</h1>
         <p className="cf-rise mt-1 text-cf-muted" style={{ "--i": 2 } as React.CSSProperties}>{user?.email}</p>
 
         <section className="cf-glass cf-rise mt-8 p-5" style={{ "--i": 3 } as React.CSSProperties}>
@@ -60,6 +63,6 @@ export default function ProfilePage() {
             <button className="cf-btn cf-btn-primary text-sm" disabled={isLoading}>{isLoading ? "Saving…" : "Update password"}</button>
           </form>
       </main>
-    </Protected>
+    </>
   );
 }

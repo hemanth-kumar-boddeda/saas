@@ -3,136 +3,59 @@ import React, { FC, useEffect, useState } from 'react';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { AiOutlineEye, AiOutlineEyeInvisible } from 'react-icons/ai';
-import { styles } from '../../../app/styles/style';
-import {useLoginMutation} from '@/redux/features/auth/authApi';
+import { useLoginMutation } from '@/redux/features/auth/authApi';
 import GoogleAuthButton from './GoogleAuthButton';
-import toast from 'react-hot-toast';
-type Props = {
-    setRoute: (route: string) => void;
-    setOpen: (open: boolean) => void;
-    title?: string;
-};
+import { toast } from 'react-toastify';
+
+type Props = { onDone: () => void };
 
 const schema = Yup.object().shape({
-    email: Yup.string().email('Invalid email!').required("Please enter your email"),
-    password: Yup.string().required("Please enter your password").min(6),
+  email: Yup.string().email('Enter a valid email').required('Enter your email'),
+  password: Yup.string().required('Enter your password').min(6, 'At least 6 characters'),
 });
 
-const Login: FC<Props> = ({ setRoute,setOpen, title = "Sign in to CreatorFlow" }) => {
-    const [show, setShow] = useState(false);
-    const [login,{isSuccess,error}] = useLoginMutation();
-    const formik = useFormik({
-        initialValues: {
-            email: "",
-            password: ""
-        },
-        validationSchema: schema,
-        onSubmit: async ({ email, password }) => {
-          await login({email,password})
-            
-        },
-    });
+const Login: FC<Props> = ({ onDone }) => {
+  const [show, setShow] = useState(false);
+  const [login, { isSuccess, isLoading, error }] = useLoginMutation();
+  const formik = useFormik({
+    initialValues: { email: '', password: '' },
+    validationSchema: schema,
+    onSubmit: async ({ email, password }) => { await login({ email, password }); },
+  });
 
-    useEffect(() => {
-       if(isSuccess){
-        toast.success("Login successfully");
-        setOpen(false);
-       }
-       if (error){
-        if("data" in error){
-            const errorData = error as any;
-            toast.error(errorData.data.message);
-        }
-       }
-    },[isSuccess, error, setOpen] )
+  useEffect(() => {
+    if (isSuccess) { toast.success('Signed in'); onDone(); }
+    if (error) toast.error((error as any)?.data?.message || 'Could not sign in. Check your connection and try again.');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSuccess, error]);
 
-    const { errors, touched, values, handleChange, handleSubmit } = formik;
-
-    return (
-        <div className="w-full ">
-            <h1 className={styles.title}>
-                {title}
-            </h1>
-            <form onSubmit={handleSubmit}>
-                <label className={styles.label} htmlFor="email">
-                    Enter your Email
-                </label>
-                <input
-                    type="email"
-                    name="email"
-                    value={values.email}
-                    onChange={handleChange}
-                    id="email"
-                    placeholder="loginmail@gmail.com"
-                    className={`${errors.email && touched.email && "border-red-500"} ${styles.input}`}
-                />
-                {errors.email && touched.email && (
-                    <span className="text-red-500 pt-2 block">{errors.email}</span>
-                )}
-                <div className="w-full mt-5 relative mb-1 text-black dark:text-white">
-                    <label className={styles.label} htmlFor="password">
-                        Enter your Password
-                    </label>
-                    <input
-                        type={show ? "text" : "password"}
-                        name="password"
-                        value={values.password}
-                        onChange={handleChange}
-                        id="password"
-                        placeholder="password!@%"
-                        className={`${errors.password && touched.password && "border-red-500"} ${styles.input}`}
-                    />
-                    {!show ? (
-                        <AiOutlineEyeInvisible
-                            className="absolute bottom-3 right-2 z-1 cursor-pointer"
-                            size={20}
-                            onClick={() => setShow(true)}
-                        />
-                    ) : (
-                        <AiOutlineEye
-                            className="absolute bottom-3 right-2 z-1 cursor-pointer"
-                            size={20}
-                            onClick={() => setShow(false)}
-                        />
-                    )}
-                    {errors.password && touched.password && (
-                        <span className="text-red-500 pt-2 block">{errors.password}</span>
-                    )}
-                </div>
-                <div className="w-full mt-5">
-                    <input
-                        type="submit"
-                        value="Login"
-                        className={`${styles.button}`}
-                    />
-                </div>
-                <br/>
-                <h5 className="text-center pt-4 font-Poppins text-[14px] text-black dark:text-white">
-                        Or join with
-                </h5>
-                <div className="flex items-center justify-center my-3">
-                    {/* SEC-01: server-verified Google sign-in. GitHub sign-in is
-                        deliberately absent until a server-side code exchange exists. */}
-                    <GoogleAuthButton
-                        onSuccess={() => {
-                            toast.success("Login successfully");
-                            setOpen(false);
-                        }}
-                    />
-                    </div>
-                    <h5 className="text-center pt-4 font-Poppins text-[14px] text-black dark:text-white">
-                        Dont have an account?{" "}
-                        <span
-                            className="text-[#2190ff] cursor-pointer pl-1"
-                            onClick={() => setRoute("Sign-Up")}
-                        >
-                            Sign-Up
-                        </span>
-
-                    </h5>
-            </form>
+  const { errors, touched, values, handleChange, handleBlur, handleSubmit } = formik;
+  return (
+    <form onSubmit={handleSubmit} noValidate className="space-y-4">
+      <div>
+        <label className="mb-1 block text-sm text-cf-muted" htmlFor="email">Email</label>
+        <input id="email" name="email" type="email" autoComplete="email" placeholder="you@studio.com" className="cf-input" value={values.email} onChange={handleChange} onBlur={handleBlur} aria-invalid={!!(errors.email && touched.email)} />
+        {errors.email && touched.email && <p role="alert" className="mt-1 text-xs text-red-300">{errors.email}</p>}
+      </div>
+      <div>
+        <label className="mb-1 block text-sm text-cf-muted" htmlFor="password">Password</label>
+        <div className="relative">
+          <input id="password" name="password" type={show ? 'text' : 'password'} autoComplete="current-password" placeholder="Your password" className="cf-input pr-10" value={values.password} onChange={handleChange} onBlur={handleBlur} aria-invalid={!!(errors.password && touched.password)} />
+          <button type="button" aria-label={show ? 'Hide password' : 'Show password'} className="absolute inset-y-0 right-3 text-cf-muted hover:text-cf-text" onClick={() => setShow(!show)}>
+            {show ? <AiOutlineEye size={18} /> : <AiOutlineEyeInvisible size={18} />}
+          </button>
         </div>
-    );
-}
+        {errors.password && touched.password && <p role="alert" className="mt-1 text-xs text-red-300">{errors.password}</p>}
+      </div>
+      <button type="submit" className="cf-btn cf-btn-primary w-full py-2.5" disabled={isLoading}>{isLoading ? 'Signing in…' : 'Sign in'}</button>
+      {process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && (
+        <>
+          <div className="flex items-center gap-3 text-xs text-cf-muted"><span className="h-px flex-1 bg-cf-line" />or<span className="h-px flex-1 bg-cf-line" /></div>
+          <div className="flex justify-center"><GoogleAuthButton onSuccess={() => { toast.success('Signed in'); onDone(); }} /></div>
+        </>
+      )}
+    </form>
+  );
+};
 
 export default Login;

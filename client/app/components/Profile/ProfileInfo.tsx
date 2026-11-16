@@ -6,7 +6,7 @@ import avatarIcon from '../../../public/assets/avatar.png'
 import { useEditProfileMutation, useUpdateAvatarMutation } from '@/redux/features/user/userApi';
 import { useLoadUserQuery } from '@/redux/features/api/apiSlice';
 import { error } from 'console';
-import toast from 'react-hot-toast';
+import { toast } from 'react-toastify';
 type Props = {
     avatar: string | null;
     user: any;

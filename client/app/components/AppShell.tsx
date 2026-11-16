@@ -3,6 +3,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import React, { useState } from "react";
 import { useLoadUserQuery } from "../../redux/features/api/apiSlice";
+import { useSelector } from "react-redux";
 import { useLogOutQuery } from "../../redux/features/auth/authApi";
 
 const LINKS = [{ label: "Projects", href: "/projects" }, { label: "Profile", href: "/profile" }];
@@ -14,7 +15,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const { data } = useLoadUserQuery(undefined, {});
   const [out, setOut] = useState(false);
   useLogOutQuery(undefined, { skip: !out });
-  const user = data?.user;
+  const authUser = useSelector((st: any) => st.auth.user);
+  const user = authUser || data?.user;
 
   return (
     <div className="dark cf-root relative min-h-screen bg-cf-bg font-cf text-cf-text">
