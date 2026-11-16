@@ -18,6 +18,8 @@ const m = await vi.hoisted(async () => {
 vi.mock("../models/review.model", () => m);
 vi.mock("../models/user.model", () => ({ default: { findOne: vi.fn(), find: vi.fn().mockResolvedValue([]) } }));
 vi.mock("../utils/notify", () => ({ notifyProject: vi.fn() }));
+const autoKit = vi.hoisted(() => vi.fn().mockResolvedValue(true));
+vi.mock("../jobs/autoKit", () => ({ autoStartKit: autoKit }));
 // Fake session auth: header x-user = user id.
 vi.mock("../controllers/user.controller", () => ({
   generateAccessToken: (_q: any, _r: any, next: any) => next(),
@@ -113,6 +115,15 @@ describe("approval", () => {
     const log = await request(app).get(`/v1/projects/${pid}/approvals`).set(as("owner"));
     expect(log.body.approvals).toMatchObject([{ action: "approve", versionNumber: 1 }]);
     expect((await decide("owner", "approve")).status).toBe(409);
+  });
+  it("approving starts the AI kit; requesting changes does not", async () => {
+    autoKit.mockClear();
+    expect((await decide("owner", "request_changes")).body.kitStarted).toBe(false);
+    expect(autoKit).not.toHaveBeenCalled();
+    await m.Project.updateOne({ _id: pid }, { status: "in_review" });
+    const r = await decide("owner", "approve");
+    expect(r.body.kitStarted).toBe(true);
+    expect(autoKit).toHaveBeenCalledWith(pid, 1);
   });
   it("cannot decide an old version", async () => {
     await m.ProjectVersion.create({ project: pid, number: 2, kind: "link" });

@@ -5,6 +5,7 @@ import Hls from "hls.js";
 export interface PlayerHandle {
   seek: (t: number) => void;
   time: () => number;
+  pause: () => void;
 }
 
 const apiOrigin = () => {
@@ -23,6 +24,7 @@ const Player = forwardRef<PlayerHandle, { src: string; onTime?: (t: number) => v
       if (video.current) video.current.currentTime = t;
     },
     time: () => video.current?.currentTime ?? 0,
+    pause: () => video.current?.pause(),
   }));
 
   useEffect(() => {

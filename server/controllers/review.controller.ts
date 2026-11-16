@@ -18,6 +18,7 @@ import { notifyProject } from "../utils/notify";
 import { probeDuration, toHls } from "../utils/transcode";
 import { resolveKey, versionDir, storageRoot } from "../utils/storage";
 import { logger } from "../utils/logger";
+import { autoStartKit } from "../jobs/autoKit";
 
 const oid = (v: string, what = "Resource") => {
   if (!mongoose.isValidObjectId(v)) throw new ErrorHandler(404, `${what} not found`);
@@ -225,7 +226,9 @@ export const decide = CatchAsyncError(async (req: Request, res: Response) => {
     heading: action === "approve" ? "Version approved" : "Changes requested",
     body: `${a.name} ${action === "approve" ? "approved" : "requested changes on"} version ${v.number}.${note ? " Note: " + note : ""}`,
   });
-  res.json({ success: true, status: next });
+  // Approved -> AI publish kit starts by itself (best effort, never blocks the approval).
+  const kitStarted = action === "approve" ? await autoStartKit(String(a.project._id), v.number) : false;
+  res.json({ success: true, status: next, kitStarted });
 });
 
 export const approvalLog = CatchAsyncError(async (req: Request, res: Response) => {

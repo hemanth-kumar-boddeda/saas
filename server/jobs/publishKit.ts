@@ -86,13 +86,16 @@ const pipeline = async (kitId: string) => {
   const [copy, extras] = await Promise.all([
     askJson(copyOutput, {
       model: MODELS.smart,
-      system: `You are a YouTube/Instagram strategist. Write honest, specific copy; never promise views or virality. ${ctx}`,
-      user: `Video length: ${Math.round(version.duration)}s. Transcript:\n${transcript}\n\nReturn {"titles":[3 distinct options],"description":string,"chapters":[{"start":seconds,"title":string}]}. Chapters must use real transcript timing, start at 0.`,
+      system: `You are a YouTube/Instagram SEO and packaging strategist. Rules: be honest and specific to the transcript; never promise views or virality; no clickbait that the video does not deliver; no emojis spam. ${ctx}`,
+      user: `Video length: ${Math.round(version.duration)}s. Transcript:\n${transcript}\n\nReturn {"titles":[3 distinct options],"description":string,"chapters":[{"start":seconds,"title":string}]}.
+Titles: under 60 characters, primary search keyword in the first half, each uses a different angle (benefit, curiosity, how-to).
+Description: first 150 characters hook the viewer and contain the main keyword (that is what shows in search); then 2 short paragraphs on what the viewer learns, naturally using related keywords; then a call to action. No keyword stuffing.
+Chapters: real transcript timing, first at 0, at least 3, titles descriptive and keyword-aware.`,
     }),
     askJson(tagsOutput, {
       model: MODELS.fast,
       system: `You write short metadata for videos. ${ctx}`,
-      user: `Transcript:\n${transcript}\n\nReturn {"hashtags":["#tag"...],"tags":["keyword"...],"thumbnailTexts":[3 bold phrases, max 4 words each]}.`,
+      user: `Transcript:\n${transcript}\n\nReturn {"hashtags":[3-8 relevant #tags, mix broad and niche],"tags":[10-20 search phrases people would type, most important first],"thumbnailTexts":[3 bold phrases, max 4 words each, that match the video and add intrigue without misleading]}.`,
       maxTokens: 1024,
     }),
   ]);

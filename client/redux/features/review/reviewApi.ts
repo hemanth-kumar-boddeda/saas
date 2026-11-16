@@ -33,7 +33,7 @@ export const reviewApi = apiSlice.injectEndpoints({
     }),
     decide: b.mutation<any, { id: string; action: "approve" | "request_changes"; versionId: string; note?: string }>({
       query: ({ id, ...body }) => ({ url: `projects/${id}/approval`, method: "POST", body }),
-      invalidatesTags: ["Project", "Projects", "Approvals"],
+      invalidatesTags: ["Project", "Projects", "Approvals", "Kit"],
     }),
     approvals: b.query<any, string>({ query: (id) => `projects/${id}/approvals`, providesTags: ["Approvals"] }),
     createLink: b.mutation<any, { id: string; password?: string; expiresInDays?: number }>({

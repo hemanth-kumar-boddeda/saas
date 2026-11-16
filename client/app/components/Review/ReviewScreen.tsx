@@ -4,6 +4,7 @@ import Link from "next/link";
 import { toast } from "react-toastify";
 import Player, { PlayerHandle } from "./Player";
 import PublishKit from "./PublishKit";
+import YouTubePlayer, { youtubeId } from "./YouTubePlayer";
 import {
   errMsg, useAddCommentMutation, useAddEditorMutation, useAddVersionMutation, useApprovalsQuery, useCreateLinkMutation, useDecideMutation,
   useGetProjectQuery, useListCommentsQuery, useListLinksQuery, useRevokeLinkMutation, useSetCommentStatusMutation,
@@ -40,11 +41,16 @@ const Notice = () => (
 );
 
 export default function ReviewScreen({ projectId, guest }: { projectId: string; guest: boolean }) {
-  const { data, isLoading, error } = useGetProjectQuery(projectId);
+  const [busy, setBusy] = useState(false);
+  const { data, isLoading, error } = useGetProjectQuery(projectId, { pollingInterval: busy ? 3000 : 0 });
   const [picked, setPicked] = useState<string | null>(null);
   const versions: any[] = data?.versions || [];
   const vid = picked || versions[versions.length - 1]?._id;
   const version = versions.find((v) => v._id === vid);
+  const ytId = version?.kind === "link" ? youtubeId(version.externalUrl) : null;
+  const pending = versions.some((v) => v.processing === "pending");
+  if (pending !== busy) setBusy(pending);
+  const [ytDuration, setYtDuration] = useState(0);
   const project = data?.project;
   const role: string = project?.role || "guest";
   const isLatest = version && version.number === project?.currentVersion;
@@ -77,26 +83,22 @@ export default function ReviewScreen({ projectId, guest }: { projectId: string; 
 
   const comments: any[] = cdata?.comments || [];
   const roots = comments.filter((c) => !c.parentId);
-  const duration: number = version?.duration || 0;
+  const duration: number = version?.duration || ytDuration || 0;
 
   return (
     <div className="cf-rise mx-auto max-w-7xl p-4 sm:p-6 text-cf-text">
-      <header className="flex flex-wrap items-center gap-3 mb-4">
-        {!guest && <Link href="/projects" className="text-sm underline">← Projects</Link>}
-        <h1 className="cf-hero-gradient text-2xl font-semibold tracking-tight sm:text-3xl">{project.title}</h1>
-        <StatusBadge status={project.status} />
-        <select
-          aria-label="Version"
-          className={`${input} !w-auto ml-auto`}
-          value={vid || ""}
-          onChange={(e) => setPicked(e.target.value)}
-        >
-          {versions.map((v) => (
-            <option key={v._id} value={v._id}>
-              Version {v.number}{v.number === project.currentVersion ? " (latest)" : ""}
-            </option>
-          ))}
-        </select>
+      <header className="mb-5">
+        <div className="flex flex-wrap items-center gap-3">
+          {!guest && <Link href="/projects" className="cf-chip hover:text-cf-text">← Projects</Link>}
+          <StatusBadge status={project.status} />
+          <select aria-label="Version" className={`${input} !w-auto ml-auto`} value={vid || ""} onChange={(e) => setPicked(e.target.value)}>
+            {versions.map((v) => (
+              <option key={v._id} value={v._id}>Version {v.number}{v.number === project.currentVersion ? " (latest)" : ""}</option>
+            ))}
+          </select>
+        </div>
+        <h1 className="cf-hero-gradient mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">{project.title}</h1>
+        {!guest && <Stepper status={project.status} />}
       </header>
 
       {!version ? (
@@ -107,32 +109,44 @@ export default function ReviewScreen({ projectId, guest }: { projectId: string; 
       ) : (
         <div className="grid gap-4 lg:grid-cols-[1fr_380px]">
           <section>
-            {version.processing === "pending" && <div className={card}>Processing video… this page updates when you reload.</div>}
+            {version.processing === "pending" && <div className={`${card} flex items-center gap-3`} role="status"><span className="cf-skeleton h-3 w-3 !rounded-full" />Processing your video. The preview appears here automatically.</div>}
             {version.processing === "failed" && <div className={`${card} text-red-300`}>Processing failed. Upload this version again.</div>}
-            {version.kind === "link" && (
+            {version.kind === "link" && !ytId && (
               <div className={card}>
                 <a className="underline break-all" href={version.externalUrl} target="_blank" rel="noreferrer noopener">{version.externalUrl}</a>
-                <p className="text-xs text-cf-muted mt-1">External link: open it in a new tab and enter timecodes by hand.</p>
+                <p className="text-xs text-cf-muted mt-1">This link cannot be embedded here. Open it in a new tab and enter timecodes by hand. Only YouTube links play inside CreatorFlow.</p>
               </div>
             )}
             {stream.isFetching && <div className={card}>Loading player…</div>}
             {stream.data?.kind === "hls" && <Player ref={player} src={stream.data.url} onTime={setNow} />}
+            {ytId && <YouTubePlayer ref={player} videoId={ytId} onTime={setNow} onDuration={setYtDuration} />}
             {stream.isError && <p className="text-red-300 text-sm">{errMsg(stream.error)}</p>}
 
             {duration > 0 && (
-              <div className="relative h-6 mt-2 rounded bg-white/10" aria-label="Comment timeline">
+              <div
+                className="group relative mt-3 h-8 cursor-pointer rounded-full bg-white/10"
+                role="slider" aria-label="Comment timeline: click to jump" aria-valuemin={0} aria-valuemax={Math.round(duration)} aria-valuenow={Math.round(now)}
+                onClick={(e) => {
+                  const r = e.currentTarget.getBoundingClientRect();
+                  player.current?.seek(Math.max(0, Math.min(duration, ((e.clientX - r.left) / r.width) * duration)));
+                }}
+              >
+                <div className="absolute inset-y-0 left-0 rounded-full bg-cf-violet/30" style={{ width: `${Math.min(100, (now / duration) * 100)}%` }} />
                 {roots.map((c) => (
                   <button
                     key={c._id}
-                    title={`${fmt(c.timecode)} ${c.body}`}
-                    onClick={() => player.current?.seek(c.timecode)}
+                    title={`${fmt(c.timecode)} ${c.authorName}: ${c.body}`}
+                    onClick={(e) => { e.stopPropagation(); player.current?.seek(c.timecode); }}
                     style={{ left: `${Math.min(100, (c.timecode / duration) * 100)}%` }}
-                    className={`absolute top-0 h-6 w-2 -ml-1 rounded ${c.status === "resolved" ? "bg-green-400" : "bg-amber-400"}`}
+                    className={`absolute top-1/2 -ml-2 h-4 w-4 -translate-y-1/2 rounded-full border-2 border-black transition-transform duration-300 hover:scale-125 ${c.status === "resolved" ? "bg-green-400" : "bg-amber-400"}`}
                   />
                 ))}
+                <div className="pointer-events-none absolute inset-y-0 w-0.5 bg-white" style={{ left: `${Math.min(100, (now / duration) * 100)}%` }} />
+                <span className="pointer-events-none absolute -bottom-5 left-0 text-[11px] text-cf-muted">{fmt(now)}</span>
+                <span className="pointer-events-none absolute -bottom-5 right-0 text-[11px] text-cf-muted">{fmt(duration)}</span>
               </div>
             )}
-            <div className="mt-2"><Notice /></div>
+            <div className="mt-7"><Notice /></div>
             {!isLatest && <p className="mt-2 text-sm text-amber-300">You are viewing an older version. Comments here belong to this version only.</p>}
           </section>
 
@@ -154,7 +168,7 @@ export default function ReviewScreen({ projectId, guest }: { projectId: string; 
                 <Thread key={c._id} c={c} replies={comments.filter((r) => r.parentId === c._id)} projectId={projectId} vid={vid} role={role} seek={(t: number) => player.current?.seek(t)} />
               ))}
             </div>
-            <NewComment projectId={projectId} vid={vid} now={now} manual={version.kind === "link"} duration={duration} />
+            <NewComment projectId={projectId} vid={vid} now={now} manual={version.kind === "link" && !ytId} onFocus={() => player.current?.pause()} duration={duration} />
           </aside>
         </div>
       )}
@@ -184,8 +198,9 @@ function Thread({ c, replies, projectId, vid, role, seek }: any) {
   return (
     <div className={`rounded-xl border p-3 bg-black/20 ${c.status === "resolved" ? "opacity-70 border-green-500/40" : "border-cf-line"}`}>
       <div className="flex items-center gap-2 text-xs text-cf-muted">
-        <button className="font-mono underline" onClick={() => seek(c.timecode)}>{fmt(c.timecode)}</button>
-        <span>{c.authorName}</span>
+        <span aria-hidden="true" className="flex h-6 w-6 items-center justify-center rounded-full bg-cf-violet/30 text-[11px] font-semibold text-violet-100">{String(c.authorName || "?").slice(0, 1).toUpperCase()}</span>
+        <span className="text-cf-text">{c.authorName}</span>
+        <button className="cf-badge border-cf-violet/40 bg-cf-violet/10 font-mono text-violet-200 hover:bg-cf-violet/20" onClick={() => seek(c.timecode)}>{fmt(c.timecode)}</button>
         {c.status === "resolved" && <span className="text-green-300">resolved</span>}
       </div>
       <p className="text-sm whitespace-pre-wrap break-words">{c.body}</p>
@@ -221,7 +236,7 @@ function Thread({ c, replies, projectId, vid, role, seek }: any) {
   );
 }
 
-function NewComment({ projectId, vid, now, manual, duration }: any) {
+function NewComment({ projectId, vid, now, manual, duration, onFocus }: any) {
   const [body, setBody] = useState("");
   const [time, setTime] = useState("0:00");
   const [add, { isLoading }] = useAddCommentMutation();
@@ -242,12 +257,12 @@ function NewComment({ projectId, vid, now, manual, duration }: any) {
         {manual ? (
           <input aria-label="Timecode" className={`${input} !w-24`} value={time} onChange={(e) => setTime(e.target.value)} />
         ) : (
-          <span className="font-mono">@ {fmt(now)}</span>
+          <span className="cf-badge border-cf-violet/40 bg-cf-violet/10 text-violet-200 font-mono">{fmt(now)}</span>
         )}
         {duration > 0 && <span className="text-cf-muted">of {fmt(duration)}</span>}
       </div>
-      <textarea className={input} rows={2} maxLength={2000} value={body} onChange={(e) => setBody(e.target.value)} placeholder="Comment at this moment" />
-      <button className={btnPrimary} disabled={isLoading || !body.trim()}>Add comment</button>
+      <textarea className={input} rows={2} maxLength={2000} value={body} onChange={(e) => setBody(e.target.value)} placeholder="Pause the video, then write your note for this exact moment" onFocus={onFocus} />
+      <button className={`${btnPrimary} w-full`} disabled={isLoading || !body.trim()}>{manual ? "Add comment" : `Comment at ${fmt(now)}`}</button>
     </form>
   );
 }
@@ -293,8 +308,8 @@ function ApprovalBox({ projectId, vid, status }: any) {
   const done = status === "approved" || status === "published";
   const go = async (action: "approve" | "request_changes") => {
     try {
-      await decide({ id: projectId, action, versionId: vid, note: note || undefined }).unwrap();
-      toast.success(action === "approve" ? "Approved" : "Changes requested");
+      const r = await decide({ id: projectId, action, versionId: vid, note: note || undefined }).unwrap();
+      toast.success(action !== "approve" ? "Changes requested" : r.kitStarted ? "Approved. The AI publish kit is being generated below." : "Approved. Upload a video file (not a link) to generate the AI kit.");
       setOpen(false); setNote("");
     } catch (er) { toast.error(errMsg(er)); }
   };
@@ -400,7 +415,7 @@ function InviteEditor({ projectId, count }: { projectId: string; count: number }
         } catch (er) { toast.error(errMsg(er)); }
       }}
     >
-      <h2 className="font-medium mb-1">Editors</h2>
+      <h2 className="font-semibold mb-1">Editors</h2>
       <p className="text-xs text-cf-muted mb-2">{count} editor{count === 1 ? "" : "s"}. Editors can upload versions and comment. They must have a CreatorFlow account.</p>
       <div className="flex gap-2">
         <label htmlFor="editor-email" className="sr-only">Editor email</label>
@@ -408,5 +423,20 @@ function InviteEditor({ projectId, count }: { projectId: string; count: number }
         <button className={btnPrimary} disabled={isLoading || !email.trim()}>Add editor</button>
       </div>
     </form>
+  );
+}
+
+const STEPS = ["Review", "Approved", "AI kit", "Published"];
+function Stepper({ status }: { status: string }) {
+  const at = status === "published" ? 3 : status === "approved" ? 2 : 0;
+  return (
+    <ol className="mt-4 flex flex-wrap items-center gap-2 text-xs" aria-label="Progress">
+      {STEPS.map((label, i) => (
+        <li key={label} className="flex items-center gap-2" aria-current={i === at ? "step" : undefined}>
+          <span className={`cf-badge ${i < at ? "border-green-500/30 bg-green-500/10 text-green-300" : i === at ? "border-cf-violet/50 bg-cf-violet/15 text-violet-200" : "border-cf-line text-cf-muted"}`}>{i + 1}. {label}</span>
+          {i < STEPS.length - 1 && <span aria-hidden="true" className="h-px w-5 bg-cf-line" />}
+        </li>
+      ))}
+    </ol>
   );
 }
