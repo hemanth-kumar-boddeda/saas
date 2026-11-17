@@ -10,8 +10,11 @@ import reviewRouter from "./routes/review.route";
 import publishKitRouter from "./routes/publishkit.route";
 import { startKitWorker } from "./jobs/publishKit";
 import socialRouter from "./routes/social.route";
+import reelRouter from "./reel/routes";
+import { startReelWorker } from "./reel/queue";
 import { startPublishWorker } from "./jobs/publish";
 import http from "http";
+import { logger } from "./utils/logger";
 import { allowedOrigins } from "./config/env";
 
 import dotenv from 'dotenv';
@@ -64,6 +67,7 @@ app.use("/v1/users/", userRouter);
 app.use("/v1/", reviewRouter);
 app.use("/v1/", publishKitRouter);
 app.use("/v1/", socialRouter);
+if (process.env.REEL_ENABLED !== "false") app.use("/v1/", reelRouter);
 
 app.get("/", (req: Request, res: Response) => {
   return res.send("Express Typescript on Vercel");
@@ -84,5 +88,6 @@ server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}!`);
   connectDB();
   startKitWorker();
+  if (process.env.REEL_ENABLED !== "false") void startReelWorker().catch((e) => logger.error("reel_worker_start_failed", { errorMessage: e.message }));
   startPublishWorker();
 });

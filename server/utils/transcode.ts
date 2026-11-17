@@ -4,7 +4,7 @@ import { spawn } from "child_process";
 import fs from "fs";
 import path from "path";
 
-const run = (cmd: string, args: string[]) =>
+export const run = (cmd: string, args: string[]) =>
   new Promise<string>((resolve, reject) => {
     const p = spawn(cmd, args);
     let out = "";
