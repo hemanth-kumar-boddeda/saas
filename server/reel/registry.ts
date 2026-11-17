@@ -23,6 +23,7 @@ export const EDIT_OPS: EditOp[] = [
   { name: "remove_range", description: "Delete a timeline range and close the gap on all tracks", args: z.object({ from: sec, to: sec }), run: (t, a) => ops.removeRange(t, a.from, a.to) },
   { name: "remove_silences", description: "Cut measured silences from a source", args: z.object({ sourceId: id, minSilence: sec.optional(), pad: sec.optional() }),
     run: async (t, a, c) => ops.removeSilences(t, a.sourceId, await c.silences(a.sourceId), a) },
+  { name: "move_segment", description: "Move a timeline range to another position without deleting anything (e.g. hook to the start; at=0)", args: z.object({ from: sec, to: sec, at: sec.optional() }), run: (t, a) => ops.moveSegment(t, a.from, a.to, a.at) },
   { name: "reorder_clips", description: "Reorder clips on a track; linked clips follow", args: z.object({ trackId: id, orderedIds: z.array(id).min(1) }), run: (t, a) => ops.reorderClips(t, a.trackId, a.orderedIds) },
   { name: "reframe_vertical", description: "Crop to 9:16 around a horizontal subject position (0..1)", args: z.object({ subjectX: z.number().min(0).max(1).optional() }), run: (t, a) => ops.reframeVertical(t, a.subjectX) },
   { name: "add_captions", description: "Build captions from the source's transcript", args: z.object({ sourceId: id, script: z.enum(["native", "roman"]).optional(), maxWords: z.number().int().min(1).max(12).optional() }),

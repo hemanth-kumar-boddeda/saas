@@ -11,7 +11,10 @@ import publishKitRouter from "./routes/publishkit.route";
 import { startKitWorker } from "./jobs/publishKit";
 import socialRouter from "./routes/social.route";
 import reelRouter from "./reel/routes";
-import { startReelWorker } from "./reel/queue";
+import { startReelWorker, enqueueJob } from "./reel/queue";
+import { mcpRouter } from "./reel/mcp/http";
+import { enqueueKit } from "./jobs/publishKit";
+import { reelIpLimiter } from "./middleware/rateLimit";
 import { startPublishWorker } from "./jobs/publish";
 import http from "http";
 import { logger } from "./utils/logger";
@@ -67,7 +70,7 @@ app.use("/v1/users/", userRouter);
 app.use("/v1/", reviewRouter);
 app.use("/v1/", publishKitRouter);
 app.use("/v1/", socialRouter);
-if (process.env.REEL_ENABLED !== "false") app.use("/v1/", reelRouter);
+if (process.env.REEL_ENABLED !== "false") { app.use("/v1/", reelRouter); app.use(mcpRouter({ enqueueJob, enqueueKit }, reelIpLimiter)); }
 
 app.get("/", (req: Request, res: Response) => {
   return res.send("Express Typescript on Vercel");

@@ -15,6 +15,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^1.8.0",
     "@imgly/background-removal-node": "^1.4.5",
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "@types/bcryptjs": "^2.4.6",
     "@types/cookie-parser": "^1.4.6",
     "@types/cors": "^2.8.17",

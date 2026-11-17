@@ -55,3 +55,30 @@ describe.skipIf(!hasFfmpeg)("real ffmpeg render", () => {
     expect(grab(out, "a.png").equals(grab(out2, "b.png"))).toBe(false);
   }, 90000);
 });
+
+import { FONT } from "../reel/render/captionPng";
+describe("caption font stack", () => {
+  it("never lists a font that breaks Telugu shaping and starts with a Telugu font", () => {
+    expect(FONT).not.toMatch(/Arial Unicode/);
+    expect(FONT.split(",")[0]).toMatch(/Telugu/);
+  });
+});
+
+describe.skipIf(!hasFfmpeg)("hook reposition renders the right pixels", () => {
+  it("red 0-4s, green 4-8s, blue 8-12s: moving blue to the front makes the first frames blue and audio follows", async () => {
+    const d = fs.mkdtempSync(path.join(os.tmpdir(), "hook-"));
+    const f = path.join(d, "rgb.mp4");
+    execFileSync("ffmpeg", ["-y", "-f", "lavfi", "-i", "color=c=red:s=320x180:r=24:d=4", "-f", "lavfi", "-i", "color=c=green:s=320x180:r=24:d=4", "-f", "lavfi", "-i", "color=c=blue:s=320x180:r=24:d=4",
+      "-f", "lavfi", "-i", "sine=frequency=300:d=4", "-f", "lavfi", "-i", "sine=frequency=900:d=4", "-f", "lavfi", "-i", "sine=frequency=1800:d=4",
+      "-filter_complex", "[0][1][2]concat=n=3:v=1:a=0[v];[3][4][5]concat=n=3:v=0:a=1[a]", "-map", "[v]", "-map", "[a]", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", f], { stdio: "ignore" });
+    let t = ops.fromSource("p", "s", { storageKey: "rgb.mp4", duration: 12, width: 320, height: 180, hasAudio: true });
+    t = ops.moveSegment(t, 8, 12, 0);
+    const out = path.join(d, "o.mp4");
+    await ffmpegProvider.render(t, { quality: "preview", outFile: out, workDir: path.join(d, "w"), resolveSource: (k) => path.join(d, k) });
+    const px = (time: number) => { const o = path.join(d, `f${time}.raw`); execFileSync("ffmpeg", ["-y", "-ss", String(time), "-i", out, "-frames:v", "1", "-vf", "scale=1:1", "-pix_fmt", "rgb24", "-f", "rawvideo", o], { stdio: "ignore" }); return [...fs.readFileSync(o)]; };
+    const [r1, g1, b1] = px(1)!; expect(b1!).toBeGreaterThan(150); expect(r1!).toBeLessThan(80);   // blue first
+    const [r2, g2] = px(5)!; expect(r2!).toBeGreaterThan(150); expect(g2!).toBeLessThan(80);        // then red
+    const [r3, g3] = px(9)!; expect(g3!).toBeGreaterThan(100); expect(r3!).toBeLessThan(80);        // then green
+    expect(g1!).toBeLessThan(80);
+  }, 60000);
+});

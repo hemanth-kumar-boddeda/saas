@@ -5,7 +5,7 @@
 // Limits are applied per authentication endpoint (one bucket each) so a burst
 // against one endpoint can never be used to exhaust another one, and so a
 // successful login does not consume the per-account budget.
-import rateLimit, { RateLimitRequestHandler } from "express-rate-limit";
+import rateLimit, { RateLimitRequestHandler, ipKeyGenerator } from "express-rate-limit";
 import { Request, Response } from "express";
 import crypto from "crypto";
 
@@ -85,3 +85,24 @@ export const publishLimiter: RateLimitRequestHandler = rateLimit({
   handler: limitHandler,
   keyGenerator: (req: Request) => `pub:${String(req.user?._id ?? "anon")}`,
 });
+
+// ReelFlow API. The editor polls jobs every 1.5 s, so the auth limiter (10/min) must NOT cover it:
+// found by driving the real UI, where it returned 429 on a plain page load and shared a bucket with login.
+// Pre-auth per-IP cap protects token guessing; plan creation is metered per principal (cookie user or API token).
+export const reelIpLimiter: RateLimitRequestHandler = rateLimit({
+  windowMs: WINDOW_PER_MINUTE_MS,
+  limit: Number(process.env.REEL_IP_RATE_LIMIT_PER_MIN) || 600,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  handler: limitHandler,
+  keyGenerator: (req: Request) => `reelip:${ipKeyGenerator(req.ip ?? "unknown")}`,
+});
+export const makeReelPlanLimiter = (limit: number): RateLimitRequestHandler => rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  handler: limitHandler,
+  keyGenerator: (req: Request) => `plan:${String(req.reel?.userId ?? req.user?._id ?? ipKeyGenerator(req.ip ?? "unknown"))}`,
+});
+export const reelPlanLimiter = makeReelPlanLimiter(Number(process.env.REEL_PLANS_PER_HOUR) || 30);

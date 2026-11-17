@@ -72,3 +72,27 @@ describe("providers", () => {
     expect(() => parseWhisper({ text: "hi" })).toThrow(/without word/);
   });
 });
+
+import { smokeChecks } from "../reel/benchmark/smoke";
+import { splitAudio } from "../reel/asr/audio";
+import { makeSampleVideo, extractAudio } from "../utils/transcode";
+import fs from "fs";
+import os from "os";
+import path from "path";
+
+describe("smoke checks and audio chunking", () => {
+  it("flags empty, unordered or out-of-range output and wrong script", () => {
+    const ok = smokeChecks({ words: [{ w: "a", start: 0, end: 1 }, { w: "b", start: 1, end: 2 }], text: "namaskaram" }, 2.2, "roman");
+    expect(ok.every((c) => c.pass)).toBe(true);
+    expect(smokeChecks({ words: [], text: "" }, 2, "native")[0]!.pass).toBe(false);
+    expect(smokeChecks({ words: [{ w: "a", start: 5, end: 6 }, { w: "b", start: 1, end: 2 }], text: "x" }, 3, "native").filter((c) => !c.pass).length).toBeGreaterThanOrEqual(2);
+    expect(smokeChecks({ words: [{ w: "a", start: 0, end: 1 }], text: "namaskaram" }, 2, "native")[3]!.pass).toBe(false);
+  });
+  it("splits real audio into <=N second chunks with offsets", async () => {
+    const d = fs.mkdtempSync(path.join(os.tmpdir(), "chunk-"));
+    await makeSampleVideo(path.join(d, "v.mp4"), "testsrc2", 8);
+    await extractAudio(path.join(d, "v.mp4"), path.join(d, "a.mp3"));
+    const c = await splitAudio(path.join(d, "a.mp3"), path.join(d, "c"), 3);
+    expect(c.map((x) => x.offset)).toEqual([0, 3, 6]);
+  }, 30000);
+});

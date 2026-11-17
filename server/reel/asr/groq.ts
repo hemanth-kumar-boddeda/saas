@@ -29,7 +29,9 @@ export const groq: AsrProvider = {
     if (o.languageHint) form.append("language", o.languageHint);
     const res = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", { method: "POST", headers: { Authorization: `Bearer ${key}` }, body: form, signal: AbortSignal.timeout(300_000) });
     if (!res.ok) throw new Error(`Groq request failed (${res.status}). Check GROQ_API_KEY`);
-    const p = parseWhisper(await res.json());
+    const raw = await res.json();
+    o.onRaw?.(raw);
+    const p = parseWhisper(raw);
     return { provider: "groq", model, language: p.language, script: "native", text: p.text, words: p.words };
   },
 };

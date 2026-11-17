@@ -46,7 +46,9 @@ export const sarvam: AsrProvider = {
         form.append("with_timestamps", "true");
         const res = await fetch(URL_(), { method: "POST", headers: { "api-subscription-key": key }, body: form, signal: AbortSignal.timeout(120_000) });
         if (!res.ok) throw new Error(`Sarvam request failed (${res.status}). Check SARVAM_API_KEY, SARVAM_ASR_MODEL=${model}, SARVAM_ASR_MODE=${mode}`);
-        const p = parseSarvam(await res.json(), c.offset);
+        const raw = await res.json();
+        o.onRaw?.(raw);
+        const p = parseSarvam(raw, c.offset);
         words.push(...p.words); text += (text ? " " : "") + p.text; language ??= p.language;
       }
       // speaker labels are not requested here: diarization is reported as unavailable, not guessed

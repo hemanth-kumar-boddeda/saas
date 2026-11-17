@@ -72,6 +72,31 @@ const jobSchema = new Schema(
   { timestamps: true }
 );
 
+// A plan is a PROPOSAL. It never changes a timeline. Only approvePlan + executePlan do, and executePlan
+// is idempotent: a second call returns the stored result.
+const planSchema = new Schema(
+  {
+    project: { ...ref("Project"), index: true },
+    owner: ref("User"),
+    instruction: { type: String, required: true, maxlength: 4000 },
+    idempotencyKey: { type: String, maxlength: 100 },
+    baseVersion: { type: Number, required: true },
+    status: { type: String, enum: ["proposed", "approved", "rejected", "executing", "executed", "failed", "superseded"], default: "proposed", index: true },
+    summary: { type: String, maxlength: 1000 },
+    ops: [{ _id: false, id: String, op: String, args: Schema.Types.Mixed, target: Schema.Types.Mixed, rationale: String, source: String,
+      warnings: [String], valid: Boolean, error: String, approved: { type: Boolean, default: false } }],
+    preview: Schema.Types.Mixed, // { beforeSeconds, afterSeconds, opsValid, opsInvalid }
+    model: Schema.Types.Mixed, // { provider, model }
+    skills: [String],
+    history: [{ _id: false, at: Date, by: String, event: String, note: String }],
+    resultVersion: Number,
+    rejectionReason: String,
+    error: String,
+  },
+  { timestamps: true }
+);
+planSchema.index({ project: 1, idempotencyKey: 1 }, { unique: true, partialFilterExpression: { idempotencyKey: { $type: "string" } } });
+
 const tokenSchema = new Schema(
   {
     owner: { ...ref("User"), index: true },
@@ -105,3 +130,4 @@ export const Transcript = model<any>("Transcript", transcriptSchema);
 export const ReelJob = model<any>("ReelJob", jobSchema);
 export const ApiToken = model<any>("ApiToken", tokenSchema);
 export const UsageEvent = model<any>("UsageEvent", usageSchema);
+export const ReelPlan = model<any>("ReelPlan", planSchema);

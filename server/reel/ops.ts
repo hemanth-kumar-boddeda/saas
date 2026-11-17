@@ -55,6 +55,45 @@ const cutRange = (t: Timeline, from: number, to: number) => {
   }
 };
 
+/**
+ * Moves the timeline range [from,to) so it starts at `at` (a position in the timeline WITHOUT the segment;
+ * 0 = the very start). Nothing is deleted: sources are untouched, clips are only re-cut and re-placed on
+ * every track, so linked audio, captions and overlays move with the picture.
+ */
+export const moveSegment = (t: Timeline, from: number, to: number, at = 0): Timeline => {
+  const total = totalDuration(t), d = to - from;
+  if (!(d > 0) || from < 0 || to > total + 1e-6) return fail(`segment ${from}-${to}s is outside the ${total.toFixed(2)}s timeline`);
+  if (at < 0 || at > total - d + 1e-6) return fail(`target ${at}s is outside 0-${(total - d).toFixed(2)}s`);
+  if (Math.abs(at - from) < 1e-6) return fail("segment is already at that position");
+  const atOrig = at < from ? at : at + d; // `at` expressed in the original timeline
+  const cuts = [...new Set([from, to, atOrig].map((x) => +x.toFixed(6)))].filter((x) => x > 1e-6 && x < total - 1e-6).sort((a, b) => a - b);
+  const bounds = [0, ...cuts, total];
+  const place = (x: number) => { // original time of a piece start -> final time
+    if (x >= from - 1e-9 && x < to - 1e-9) return at + (x - from);
+    const r = x < from ? x : x - d; // position in the timeline without the segment
+    return r >= at - 1e-9 ? r + d : r;
+  };
+  const n = clone(t);
+  for (const tr of n.tracks) {
+    const out: Clip[] = [];
+    for (const c of tr.clips) {
+      let first = true;
+      for (let i = 0; i < bounds.length - 1; i++) {
+        const a = bounds[i]!, b = bounds[i + 1]!;
+        const piece = slice(c, a, b);
+        if (!piece) continue;
+        const moved = shift(piece, place(piece.start) - piece.start);
+        if (!first) moved.id = newId();
+        if (c.group) moved.group = `${c.group}_${i}`; // linked clips slice identically, so their pieces keep matching groups
+        first = false;
+        out.push(moved);
+      }
+    }
+    tr.clips = out.sort((x, y) => x.start - y.start);
+  }
+  return finish(t, n);
+};
+
 export const trimClip = (t: Timeline, clipId: string, o: { in?: number; out?: number }): Timeline => {
   const n = clone(t); const { c } = findClip(n, clipId);
   if (!c.sourceId) return fail("only media clips can be trimmed");

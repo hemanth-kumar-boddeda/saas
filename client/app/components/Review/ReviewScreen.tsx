@@ -219,6 +219,7 @@ export default function ReviewScreen({ projectId, guest }: { projectId: string; 
       {(role === "owner" || role === "editor") && (
         <div className="mt-6 grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-2">
           <UploadVersion projectId={projectId} />
+          {!guest && <Link href={`/projects/${projectId}/editor`} className="cf-btn cf-btn-secondary self-center px-4">Open AI editor</Link>}
           {guest && <p className="text-sm text-cf-muted self-center">Finished editing? Upload your new cut (or paste a link) here. The owner is notified.</p>}
           {role === "owner" && version && isLatest && <ApprovalBox projectId={projectId} vid={vid} status={project.status} />}
           {role === "owner" && <ShareLinks projectId={projectId} />}

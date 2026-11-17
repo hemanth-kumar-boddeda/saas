@@ -24,7 +24,7 @@ vi.mock("../middleware/auth", async () => {
   const { default: ErrorHandler } = await import("../utils/ErrorHandler");
   return { isAuthenticated: (req: any, _r: any, next: any) => { const id = req.headers["x-user"]; if (!id) return next(new ErrorHandler(401, "login")); req.user = { _id: id, name: id }; next(); } };
 });
-vi.mock("../middleware/rateLimit", () => ({ authIpLimiter: (_q: any, _r: any, n: any) => n() }));
+vi.mock("../middleware/rateLimit", () => ({ reelIpLimiter: (_q: any, _r: any, n: any) => n(), reelPlanLimiter: (_q: any, _r: any, n: any) => n() }));
 
 import reelRouter from "../reel/routes";
 import { ErrorMiddleware } from "../middleware/error";

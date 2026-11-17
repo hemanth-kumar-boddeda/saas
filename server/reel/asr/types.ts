@@ -1,6 +1,6 @@
 import { Word } from "../schema";
 
-export interface AsrOptions { languageHint?: string; script?: "native" | "roman"; diarize?: boolean }
+export interface AsrOptions { languageHint?: string; script?: "native" | "roman"; diarize?: boolean; onRaw?: (raw: unknown) => void }
 export interface AsrResult {
   provider: string; model: string; language?: string; script: "native" | "roman" | "latin";
   text: string;

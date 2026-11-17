@@ -9,10 +9,12 @@ import { ReelJob } from "./models";
 import { registerReelHandlers } from "./handlers";
 
 const QUEUE = "reel-jobs";
+/** BullMQ rejects custom ids containing ":" (found live: transcribe and render returned 500). */
+export const queueJobId = (jobId: string, now = Date.now()) => `${jobId}-${now}`;
 let queue: Queue | null = null;
 export const enqueueJob = async (jobId: string) => {
   queue ??= new Queue(QUEUE, { connection: redisConnection() });
-  await queue.add("run", { jobId }, { jobId: `${jobId}:${Date.now()}`, removeOnComplete: true, removeOnFail: 100 });
+  await queue.add("run", { jobId }, { jobId: queueJobId(jobId), removeOnComplete: true, removeOnFail: 100 });
 };
 
 export const startReelWorker = async () => {

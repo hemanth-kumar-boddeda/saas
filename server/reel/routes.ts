@@ -8,7 +8,6 @@ import { z } from "zod";
 import ErrorHandler from "../utils/ErrorHandler";
 import { CatchAsyncError } from "../middleware/catchAsyncErrors";
 import { requireUser } from "../middleware/projectAccess";
-import { authIpLimiter } from "../middleware/rateLimit";
 import { tmpDir } from "../utils/storage";
 import { ApiToken } from "./models";
 import { SCOPES, Scope, createApiToken, verifyApiToken } from "./apiTokens";
@@ -16,6 +15,9 @@ import * as op from "./operations";
 import { EDIT_OPS } from "./registry";
 import { asrStatus } from "./asr";
 import { enqueueJob } from "./queue";
+import * as planning from "./planning";
+import { ProviderNotConfigured } from "./jobs";
+import { reelIpLimiter, reelPlanLimiter } from "../middleware/rateLimit";
 
 declare global { namespace Express { interface Request { reel?: { userId: string; scopes: Scope[]; viaToken: boolean } } } }
 
@@ -57,9 +59,9 @@ const parse = <T extends z.ZodTypeAny>(s: T, body: unknown): z.infer<T> => {
 };
 
 const r = express.Router();
-r.use("/reel", authIpLimiter, reelAuth);
+r.use("/reel", reelIpLimiter, reelAuth);
 
-r.get("/reel/capabilities", need("reel:read"), (_q, res) => res.json({ success: true, operations: EDIT_OPS.map((o) => ({ name: o.name, description: o.description })), asr: asrStatus() }));
+r.get("/reel/capabilities", need("reel:read"), (_q, res) => res.json({ success: true, operations: EDIT_OPS.map((o) => ({ name: o.name, description: o.description })), asr: asrStatus(), planner: { name: "gemini", configured: !!process.env.GEMINI_API_KEY, envVar: "GEMINI_API_KEY" } }));
 
 r.post("/reel/projects", need("reel:write"), CatchAsyncError(async (req: Request, res: Response) => {
   const b = parse(z.object({ title: z.string().trim().min(1).max(120), brief: z.string().max(5000).optional() }), req.body);
@@ -73,6 +75,9 @@ r.post("/reel/projects/:id/assets", need("reel:write"), (req, res, next) => uplo
     const a = await op.registerAsset(who(req), req.params.id!, req.file.path, req.file.originalname);
     res.status(201).json({ success: true, asset: op.assetJson(a) });
   }));
+
+r.get("/reel/projects/:id/assets", need("reel:read"), CatchAsyncError(async (req: Request, res: Response) =>
+  res.json({ success: true, assets: await op.listAssets(who(req), req.params.id!) })));
 
 r.get("/reel/projects/:id/timeline", need("reel:read"), CatchAsyncError(async (req: Request, res: Response) => {
   const v = req.query.version ? Number(req.query.version) : undefined;
@@ -107,6 +112,38 @@ r.post("/reel/projects/:id/timelines/:version/approve", need("reel:write"), Catc
   const row = await op.approveTimeline(who(req), req.params.id!, Number(req.params.version));
   res.json({ success: true, version: row.version, approved: row.approved });
 }));
+
+// Plans: proposing, approving and executing are three separate calls.
+const notConfigured = async <T>(f: () => Promise<T>): Promise<T> => {
+  try { return await f(); } catch (e) { if (e instanceof ProviderNotConfigured) { const h = new ErrorHandler(503, e.message, "PROVIDER_NOT_CONFIGURED"); h.expose = true; throw h; }
+    throw e; }
+};
+r.post("/reel/projects/:id/plans", need("reel:write"), reelPlanLimiter, CatchAsyncError(async (req: Request, res: Response) => {
+  const b = parse(z.object({
+    instruction: z.string().trim().min(3).max(4000), idempotencyKey: z.string().max(100).optional(),
+    preferences: z.object({ captionScript: z.enum(["native", "roman"]).optional(), targetSeconds: z.number().min(5).max(600).optional(), language: z.string().max(8).optional() }).optional(),
+  }), req.body);
+  const plan = await notConfigured(() => planning.createPlan(who(req), req.params.id!, b.instruction, { idempotencyKey: b.idempotencyKey, preferences: b.preferences }));
+  res.status(201).json({ success: true, plan: planning.planJson(plan) });
+}));
+r.post("/reel/projects/:id/plans/submit", need("reel:write"), CatchAsyncError(async (req: Request, res: Response) => {
+  const b = parse(z.object({ plan: z.unknown(), instruction: z.string().max(4000).optional(), idempotencyKey: z.string().max(100).optional(), agent: z.string().max(40).optional() }), req.body);
+  res.status(201).json({ success: true, plan: planning.planJson(await planning.submitPlan(who(req), req.params.id!, b.plan, b)) });
+}));
+r.get("/reel/projects/:id/plans", need("reel:read"), CatchAsyncError(async (req: Request, res: Response) =>
+  res.json({ success: true, plans: (await planning.listPlans(who(req), req.params.id!)).map(planning.planJson) })));
+r.get("/reel/projects/:id/plans/:planId", need("reel:read"), CatchAsyncError(async (req: Request, res: Response) =>
+  res.json({ success: true, plan: planning.planJson(await planning.getPlan(who(req), req.params.id!, req.params.planId!)) })));
+r.post("/reel/projects/:id/plans/:planId/approve", need("reel:write"), CatchAsyncError(async (req: Request, res: Response) => {
+  const b = parse(z.object({ opIds: z.array(z.string()).optional() }), req.body ?? {});
+  res.json({ success: true, plan: planning.planJson(await planning.approvePlan(who(req), req.params.id!, req.params.planId!, b.opIds)) });
+}));
+r.post("/reel/projects/:id/plans/:planId/reject", need("reel:write"), CatchAsyncError(async (req: Request, res: Response) => {
+  const b = parse(z.object({ reason: z.string().trim().min(1).max(500) }), req.body);
+  res.json({ success: true, plan: planning.planJson(await planning.rejectPlan(who(req), req.params.id!, req.params.planId!, b.reason)) });
+}));
+r.post("/reel/projects/:id/plans/:planId/execute", need("reel:write"), CatchAsyncError(async (req: Request, res: Response) =>
+  res.json({ success: true, plan: planning.planJson(await planning.executePlan(who(req), req.params.id!, req.params.planId!)) })));
 
 // API tokens: managed from a signed-in session only, never with another token.
 const sessionOnly: RequestHandler = (req, _res, next) => (req.reel!.viaToken ? next(new ErrorHandler(403, "Manage tokens from a signed-in session")) : next());

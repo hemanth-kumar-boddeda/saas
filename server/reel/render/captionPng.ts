@@ -4,7 +4,9 @@ import sharp from "sharp";
 import { Clip } from "../schema";
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
-const FONT = "Noto Sans Telugu, Telugu MN, Arial Unicode MS, Helvetica, sans-serif";
+// Verified by eye on macOS: Arial Unicode MS in the stack breaks Telugu conjunct/vowel shaping, so it is
+// excluded. Real Telugu fonts first; Noto Sans Telugu covers Linux render hosts.
+export const FONT = "Kohinoor Telugu, Telugu Sangam MN, Noto Sans Telugu, Helvetica, sans-serif";
 
 export const cueText = (c: Clip) =>
   c.text ? c.text.value : (c.words ?? []).map((w) => (c.captionStyle?.script === "roman" ? w.roman ?? w.w : w.w)).join(" ");

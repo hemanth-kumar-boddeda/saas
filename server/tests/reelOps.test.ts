@@ -111,3 +111,39 @@ describe("edit ops", () => {
     expect(n.tracks[1]!.clips[0]!.duration).toBe(20);
   });
 });
+
+describe("moveSegment", () => {
+  const split = () => { let t = base(); t = ops.splitClip(t, t.tracks[0]!.clips[0]!.id, 20); return ops.splitClip(t, t.tracks[0]!.clips.find((c) => c.start >= 20)!.id, 40); };
+  it("moves the last third to the front, keeps total length, source ranges and linked audio", () => {
+    const t = split();
+    const n = ops.moveSegment(t, 40, 60, 0);
+    expect(ops.totalDuration(n)).toBeCloseTo(60);
+    for (const tr of n.tracks) expect(tr.clips.map((c) => [c.start, c.in])).toEqual([[0, 40], [20, 0], [40, 20]]);
+    expect(n.tracks[0]!.clips[0]!.group).toBe(n.tracks[1]!.clips[0]!.group);
+    expect(validate(n)).toEqual([]);
+  });
+  it("splits a clip when the range is inside it, and moves later or earlier", () => {
+    const t = base();
+    const n = ops.moveSegment(t, 10, 20, 0); // inside one 60 s clip
+    expect(n.tracks[0]!.clips.map((c) => [c.start, c.in, c.out])).toEqual([[0, 10, 20], [10, 0, 10], [20, 20, 60]]);
+    const m2 = ops.moveSegment(t, 0, 10, 50); // to the end
+    expect(m2.tracks[0]!.clips.map((c) => [c.start, c.in])).toEqual([[0, 10], [50, 0]]);
+  });
+  it("is non-destructive: input and approved versions untouched, child unapproved", () => {
+    const t = { ...split(), approved: true }; const snap = JSON.stringify(t);
+    const n = ops.moveSegment(t, 40, 60, 0);
+    expect(JSON.stringify(t)).toBe(snap); expect([n.approved, n.parent]).toEqual([false, t.version]);
+  });
+  it("moves caption words with the picture", () => {
+    let t = ops.addCaptions(split(), "s1", [{ w: "late", start: 45, end: 46 }, { w: "early", start: 5, end: 6 }]);
+    t = ops.moveSegment(t, 40, 60, 0);
+    const words = t.tracks.find((x) => x.id === "captions")!.clips.flatMap((c) => c.words!).map((w) => [w.w, +w.start.toFixed(1)]);
+    expect(words).toEqual([["late", 5], ["early", 25]]);
+  });
+  it("rejects out-of-range, no-op and mid-timeline nonsense", () => {
+    const t = base();
+    expect(() => ops.moveSegment(t, 50, 70, 0)).toThrow(/outside/);
+    expect(() => ops.moveSegment(t, 10, 20, 10)).toThrow(/already/);
+    expect(() => ops.moveSegment(t, 10, 20, 55)).toThrow(/outside/);
+  });
+});
