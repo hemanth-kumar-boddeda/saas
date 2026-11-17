@@ -5,8 +5,8 @@ import { usePathname } from "next/navigation";
 import Dock from "../Dock";
 
 const SECTIONS = [
-  { label: "Product", id: "product" },
   { label: "Story", id: "how-it-works" },
+  { label: "Features", id: "features" },
   { label: "Teams", id: "teams" },
   { label: "FAQ", id: "faq" },
 ];

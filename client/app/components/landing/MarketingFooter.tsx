@@ -2,7 +2,7 @@ import React from "react";
 import Link from "next/link";
 
 const PRODUCT_LINKS = [
-  { label: "Product", href: "/#product" },
+  { label: "Product", href: "/#features" },
   { label: "How it works", href: "/#how-it-works" },
   { label: "For teams", href: "/#teams" },
   { label: "FAQ", href: "/#faq" },

@@ -1,45 +1,37 @@
 import Link from "next/link";
 import React from "react";
 import { ArrowRight } from "@phosphor-icons/react/dist/ssr/ArrowRight";
-import ProductPreview from "./ProductPreview";
-import BlurText from "../reactbits/BlurText";
 import HeroBackground from "./HeroBackground";
+import HeroStage from "./HeroStage";
 
 const HeroSection: React.FC = () => (
-  <section className="relative isolate overflow-hidden pb-16 pt-32 md:pb-24 md:pt-40">
+  <section className="relative isolate overflow-hidden pb-10 pt-24 md:pb-14 md:pt-32">
     <HeroBackground />
     <div className="mx-auto max-w-6xl px-4 md:px-8">
-      <div className="cf-measure">
-        <span className="cf-chip">For YouTube and Instagram creators and their editors</span>
+      <h1 className="max-w-4xl font-[family-name:var(--font-newsreader)] text-[44px] font-light leading-[1.05] tracking-[-0.02em] sm:text-6xl md:text-7xl">
+        Stop chasing feedback.
+        <br />
+        <span className="italic">Ship the video.</span>
+      </h1>
 
-        <div role="heading" aria-level={1} className="cf-hero-heading mt-6 text-cf-text">
-          <BlurText text="Stop chasing feedback." delay={90} animateBy="words" direction="top" trigger="load" />
-          <span className="cf-hero-gradient block">Ship the video.</span>
-        </div>
+      <p className="mt-6 max-w-xl text-base leading-relaxed text-cf-muted md:text-lg">
+        Pin notes to the exact second of a cut, by text, voice or a drawing on the frame.
+        Your editor ticks them off from a link, you approve a version, and the publish kit is
+        already drafted.
+      </p>
 
-        <p className="body-3 mt-6 text-cf-muted md:body-1">
-          Your editor sends a cut. You pin notes to the exact second, by text, voice or a
-          drawing on the frame. They tick each one off and upload the next version. You
-          compare the two side by side, approve, and the publish kit is already drafted.
-        </p>
-
-        <div className="mt-8 flex flex-wrap items-center gap-4">
-          <Link href="/signup" className="cf-btn cf-btn-primary button-lg">
-            Start your first review
-            <ArrowRight size={18} />
-          </Link>
-          <a href="#how-it-works" className="cf-btn cf-btn-secondary button-lg">
-            Follow one video&apos;s week
-          </a>
-        </div>
-
-        <p className="body-4 mt-6 text-cf-muted">
-          Editors need no account: they open a link. Nothing is posted without your approval.
-        </p>
+      <div className="mt-8 flex flex-wrap items-center gap-4">
+        <Link href="/signup" className="cf-btn cf-btn-primary button-lg">
+          Start your first review
+          <ArrowRight size={18} />
+        </Link>
+        <a href="#how-it-works" className="cf-btn cf-btn-secondary button-lg">See one video&apos;s week</a>
       </div>
+      <p className="mt-4 text-sm text-cf-muted">Editors need no account. Nothing posts without your approval.</p>
 
       <div className="mt-12 md:mt-16">
-        <ProductPreview compact />
+        <HeroStage />
+        <p className="mt-3 text-xs text-cf-muted">Sample clip and notes, made up for illustration.</p>
       </div>
     </div>
   </section>

@@ -292,7 +292,7 @@ body {
   .body-1 {
     font-size: 1rem;
     line-height: 1.5rem;
-    font-weight: 600;
+    font-weight: 400;
     text-wrap: pretty;
   }
 
@@ -313,7 +313,7 @@ body {
   .body-4 {
     font-size: 0.875rem;
     line-height: 1.25rem;
-    font-weight: 600;
+    font-weight: 400;
     text-wrap: pretty;
   }
 
@@ -400,9 +400,11 @@ body {
   }
 
   .cf-section-heading {
-    font-size: 1.5rem;
-    line-height: 2rem;
-    font-weight: 600;
+    font-family: var(--font-newsreader), Georgia, serif;
+    font-size: 2rem;
+    line-height: 2.25rem;
+    font-weight: 300;
+    letter-spacing: -0.015em;
     text-wrap: balance;
   }
 
@@ -420,8 +422,8 @@ body {
     }
 
     .cf-section-heading {
-      font-size: 1.875rem;
-      line-height: 2.25rem;
+      font-size: 3rem;
+      line-height: 3.2rem;
     }
 
     .cf-tagline {
@@ -626,3 +628,5 @@ body {
     .cf-aurora::before, .cf-aurora::after, .cf-rise, .cf-skeleton { animation: none; }
   }
 }
+
+@keyframes hs-pop { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }

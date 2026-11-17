@@ -39,11 +39,10 @@ const STATUS = [
 ];
 
 const TeamWorkflow: React.FC = () => (
-  <section id="teams" className="cf-scroll-offset py-24 md:py-32">
+  <section id="teams" className="cf-scroll-offset py-16 md:py-24">
     <div className="mx-auto max-w-6xl px-4 md:px-8">
       <div className="cf-measure">
-        <span className="cf-chip">For teams</span>
-        <h2 className="cf-section-heading mt-6 text-cf-text">
+        <h2 className="cf-section-heading text-cf-text">
           One project, three clear roles
         </h2>
         <p className="body-3 mt-4 text-cf-muted md:body-1">

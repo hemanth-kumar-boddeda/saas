@@ -3,11 +3,10 @@ import { CaretDown } from "@phosphor-icons/react/dist/ssr/CaretDown";
 import { FAQS } from "./faqs";
 
 const FAQSection: React.FC = () => (
-  <section id="faq" className="cf-scroll-offset py-24 md:py-32">
+  <section id="faq" className="cf-scroll-offset py-16 md:py-24">
     <div className="mx-auto max-w-6xl px-4 md:px-8">
       <div className="cf-measure">
-        <span className="cf-chip">FAQ</span>
-        <h2 className="cf-section-heading mt-6 text-cf-text">
+        <h2 className="cf-section-heading text-cf-text">
           Questions people ask before they start
         </h2>
       </div>

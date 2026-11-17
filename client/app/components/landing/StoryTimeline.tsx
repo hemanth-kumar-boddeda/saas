@@ -43,13 +43,16 @@ const StoryTimeline: React.FC = () => {
   const scene = DAYS[active];
 
   return (
-    <section id="how-it-works" className="cf-scroll-offset py-24 md:py-32">
+    <section id="how-it-works" className="cf-scroll-offset py-16 md:py-24">
       <div className="mx-auto max-w-6xl px-4 md:px-8">
         <div className="grid gap-10 lg:grid-cols-[1fr_1.1fr] lg:gap-16">
           <div className="lg:sticky lg:top-28 lg:self-start">
-            <span className="cf-chip">One video, one week</span>
-            <h2 className="cf-section-heading mt-6 text-cf-text">What a review looks like when nothing gets lost</h2>
-            <p className="body-3 mt-4 text-cf-muted md:body-1">Scroll through five beats, every one of them something CreatorFlow does today.</p>
+            <h2 className="cf-section-heading text-cf-text">
+              The notes are in six chats. The cut is called <span className="italic">final_v7_REAL.mp4</span>. Nobody knows what was approved.
+            </h2>
+            <p className="mt-5 max-w-md text-base leading-relaxed text-cf-muted">
+              Here is the same video in CreatorFlow: one week, five beats, every one of them something the product does today.
+            </p>
 
             <div className="mt-8 hidden lg:block" aria-hidden="true">
               <div className="cf-card overflow-hidden">

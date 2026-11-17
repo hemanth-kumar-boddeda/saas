@@ -7,7 +7,6 @@ import { YoutubeLogo } from "@phosphor-icons/react/dist/ssr/YoutubeLogo";
 import GlowCard from "./GlowCard";
 
 type Feature = {
-  index: string;
   Icon: React.ElementType;
   title: string;
   body: string;
@@ -46,7 +45,6 @@ const head = "flex items-center gap-2 border-b border-cf-line pb-4 caption-2";
 
 const FEATURES: Feature[] = [
   {
-    index: "Feature 01",
     Icon: ChatCircleDots,
     title: "Review on the timeline",
     body:
@@ -77,7 +75,6 @@ const FEATURES: Feature[] = [
     ),
   },
   {
-    index: "Feature 02",
     Icon: Check,
     title: "Versions, compare, checklist",
     body:
@@ -114,7 +111,6 @@ const FEATURES: Feature[] = [
     ),
   },
   {
-    index: "Feature 03",
     Icon: Sparkle,
     title: "AI publish kit",
     body:
@@ -142,7 +138,6 @@ const FEATURES: Feature[] = [
     ),
   },
   {
-    index: "Feature 04",
     Icon: PaperPlaneTilt,
     title: "Publish or schedule",
     body:
@@ -176,11 +171,10 @@ const FEATURES: Feature[] = [
 ];
 
 const FeatureShowcase: React.FC = () => (
-  <section id="features" className="cf-scroll-offset bg-cf-surface py-24 md:py-32">
+  <section id="features" className="cf-scroll-offset bg-cf-surface py-16 md:py-24">
     <div className="mx-auto max-w-6xl px-4 md:px-8">
       <div className="cf-measure">
-        <span className="cf-chip">In detail</span>
-        <h2 className="cf-section-heading mt-6 text-cf-text">
+        <h2 className="cf-section-heading text-cf-text">
           Four steps that share one project
         </h2>
         <p className="body-3 mt-4 text-cf-muted md:body-1">
@@ -193,8 +187,7 @@ const FeatureShowcase: React.FC = () => (
         {FEATURES.map((feature, index) => (
           <article key={feature.title} className="grid items-center gap-10 md:grid-cols-2">
             <div className={index % 2 === 1 ? "md:order-2" : undefined}>
-              <span className="caption-2 text-cf-violet">{feature.index}</span>
-              <h3 className="title-1 mt-2 flex items-center gap-2 text-cf-text">
+              <h3 className="title-1 flex items-center gap-2 text-cf-text">
                 <feature.Icon size={20} />
                 {feature.title}
               </h3>

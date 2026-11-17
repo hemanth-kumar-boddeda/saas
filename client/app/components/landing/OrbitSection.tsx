@@ -32,11 +32,10 @@ export default function OrbitSection() {
   const item = open === null ? null : ORBIT_ITEMS[open];
 
   return (
-    <section id="orbit" className="cf-scroll-offset overflow-hidden py-24 md:py-32">
+    <section id="orbit" className="cf-scroll-offset overflow-hidden py-16 md:py-24">
       <div className="mx-auto max-w-6xl px-4 md:px-8">
         <div className="cf-measure">
-          <span className="cf-chip">Every review, in one place</span>
-          <h2 className="cf-section-heading mt-6 text-cf-text">
+          <h2 className="cf-section-heading text-cf-text">
             Every video in flight, <span className="font-[family-name:var(--font-newsreader)] font-normal italic">none of them lost.</span>
           </h2>
           <p className="body-3 mt-4 text-cf-muted md:body-1">
